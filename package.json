@@ -51,6 +51,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.15",
+    "@types/bun": "^1.2.8",
     "@types/node": "^20.14.10",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
@@ -60,6 +61,7 @@
     "drizzle-kit": "^0.30.5",
     "eslint": "^9.23.0",
     "eslint-plugin-drizzle": "^0.2.3",
+    "lefthook": "^1.11.6",
     "postcss": "^8.5.3",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.11",
