@@ -52,7 +52,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.15",
     "@types/bun": "^1.2.8",
-    "@types/node": "^20.14.10",
+    "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@yopem/eslint-config": "^0.1.12",
