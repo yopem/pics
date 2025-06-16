@@ -9,7 +9,7 @@
         "@trpc/client": "^11.0.0",
         "@trpc/react-query": "^11.0.0",
         "@trpc/server": "^11.0.0",
-        "@yopem-ui/react-icons": "^0.0.8",
+        "@yopem-ui/react-icons": "^0.0.9",
         "@yopem-ui/utils": "^0.0.2",
         "drizzle-orm": "^0.44.0",
         "next": "^15.2.3",
@@ -311,7 +311,7 @@
 
     "@typescript-eslint/visitor-keys": ["@typescript-eslint/visitor-keys@8.29.0", "", { "dependencies": { "@typescript-eslint/types": "8.29.0", "eslint-visitor-keys": "^4.2.0" } }, "sha512-Sne/pVz8ryR03NFK21VpN88dZ2FdQXOlq3VIklbrTYEt8yXtRFr9tvUhqvCeKjqYk5FSim37sHbooT6vzBTZcg=="],
 
-    "@yopem-ui/react-icons": ["@yopem-ui/react-icons@0.0.8", "", { "dependencies": { "lucide-react": "0.511.0", "react": "19.1.0" } }, "sha512-AcaiQCatzG6KFm7FpTaXoeQokK10W7DmibwnB1QSdGjF+LXP/Ki5Fo78ZK2l8VZb7eZJLD9aigGy9tYOcfM6nQ=="],
+    "@yopem-ui/react-icons": ["@yopem-ui/react-icons@0.0.9", "", { "dependencies": { "lucide-react": "0.513.0", "react": "19.1.0" } }, "sha512-cmg90kGPLGq/xrYF72Xk+h18cucOuY7Xknni+Ga4RP82D+L/hzS8VL0HhyAePr+d0PVn4a+lgUwPgqZV9MICCA=="],
 
     "@yopem-ui/utils": ["@yopem-ui/utils@0.0.2", "", { "dependencies": { "class-variance-authority": "0.7.1", "clsx": "2.1.1", "tailwind-merge": "3.2.0" } }, "sha512-1XrLNpqr/u/EJQwgwqDTu+ChuL/WL1HOOFdVQ7HGX4hhhaHmsK60V/IH1LRKrMngnUzsWE/qQ2Wp1Lfsv60Gng=="],
 
@@ -699,7 +699,7 @@
 
     "loose-envify": ["loose-envify@1.4.0", "", { "dependencies": { "js-tokens": "^3.0.0 || ^4.0.0" }, "bin": { "loose-envify": "cli.js" } }, "sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q=="],
 
-    "lucide-react": ["lucide-react@0.511.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-VK5a2ydJ7xm8GvBeKLS9mu1pVK6ucef9780JVUjw6bAjJL/QXnd4Y0p7SPeOUMC27YhzNCZvm5d/QX0Tp3rc0w=="],
+    "lucide-react": ["lucide-react@0.513.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-CJZKq2g8Y8yN4Aq002GahSXbG2JpFv9kXwyiOAMvUBv7pxeOFHUWKB0mO7MiY4ZVFCV4aNjv2BJFq/z3DgKPQg=="],
 
     "math-intrinsics": ["math-intrinsics@1.1.0", "", {}, "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g=="],
 
