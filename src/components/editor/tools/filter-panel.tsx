@@ -2,11 +2,13 @@
 
 import { useState } from "react"
 import { filters as fabricFilters, FabricImage } from "fabric"
+import { Eye, EyeOff, X } from "lucide-react"
 
 import { useEditor } from "@/components/editor/editor-context"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
+import { Toggle } from "@/components/ui/toggle"
 
 interface FilterValues {
   brightness: number
@@ -17,6 +19,12 @@ interface FilterValues {
   sharpen: number
 }
 
+interface ActiveFilter {
+  key: keyof FilterValues
+  label: string
+  value: number
+}
+
 const DEFAULT_FILTERS: FilterValues = {
   brightness: 0,
   contrast: 0,
@@ -24,6 +32,15 @@ const DEFAULT_FILTERS: FilterValues = {
   blur: 0,
   hue: 0,
   sharpen: 0,
+}
+
+const FILTER_LABELS: Record<keyof FilterValues, string> = {
+  brightness: "Brightness",
+  contrast: "Contrast",
+  saturation: "Saturation",
+  blur: "Blur",
+  hue: "Hue Rotation",
+  sharpen: "Sharpen",
 }
 
 const FILTER_PRESETS = [
@@ -79,6 +96,10 @@ const FILTER_PRESETS = [
 export function FilterPanel() {
   const { canvas, addToHistory } = useEditor()
   const [filters, setFilters] = useState<FilterValues>(DEFAULT_FILTERS)
+  const [showBeforeAfter, setShowBeforeAfter] = useState(false)
+  const [originalImageData, setOriginalImageData] = useState<string | null>(
+    null,
+  )
 
   const handleFilterChange = (
     key: keyof FilterValues,
@@ -95,6 +116,14 @@ export function FilterPanel() {
 
     const activeObject = canvas.getActiveObject()
     if (!activeObject || !(activeObject instanceof FabricImage)) return
+
+    // Store original image data for before/after comparison
+    if (!originalImageData) {
+      const src = activeObject.getSrc()
+      if (src && typeof src === "string") {
+        setOriginalImageData(src)
+      }
+    }
 
     const filterArray = []
 
@@ -157,7 +186,40 @@ export function FilterPanel() {
   const handleReset = () => {
     setFilters(DEFAULT_FILTERS)
     applyFilters(DEFAULT_FILTERS)
+    setOriginalImageData(null)
   }
+
+  const handleRemoveFilter = (key: keyof FilterValues) => {
+    const newFilters = { ...filters, [key]: 0 }
+    setFilters(newFilters)
+    applyFilters(newFilters)
+  }
+
+  const toggleBeforeAfter = () => {
+    if (!canvas) return
+    const activeObject = canvas.getActiveObject()
+    if (!activeObject || !(activeObject instanceof FabricImage)) return
+
+    if (!showBeforeAfter) {
+      // Show original
+      activeObject.filters = []
+      activeObject.applyFilters()
+      canvas.renderAll()
+    } else {
+      // Show filtered
+      applyFilters(filters)
+    }
+
+    setShowBeforeAfter(!showBeforeAfter)
+  }
+
+  const activeFilters: ActiveFilter[] = Object.entries(filters)
+    .filter(([, value]) => value !== 0)
+    .map(([key, value]) => ({
+      key: key as keyof FilterValues,
+      label: FILTER_LABELS[key as keyof FilterValues],
+      value,
+    }))
 
   return (
     <div className="flex h-full flex-col gap-4 p-4">
@@ -178,6 +240,52 @@ export function FilterPanel() {
       </div>
 
       <Separator />
+
+      {activeFilters.length > 0 && (
+        <>
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <h4 className="text-xs font-medium">Active Filters</h4>
+              <Toggle
+                size="sm"
+                pressed={showBeforeAfter}
+                onPressedChange={toggleBeforeAfter}
+                aria-label="Toggle before/after view"
+              >
+                {showBeforeAfter ? (
+                  <Eye className="h-3 w-3" />
+                ) : (
+                  <EyeOff className="h-3 w-3" />
+                )}
+              </Toggle>
+            </div>
+            <div className="space-y-1">
+              {activeFilters.map((filter) => (
+                <div
+                  key={filter.key}
+                  className="bg-muted flex items-center justify-between rounded-md px-2 py-1.5"
+                >
+                  <span className="text-xs font-medium">{filter.label}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground text-xs">
+                      {filter.value.toFixed(2)}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => handleRemoveFilter(filter.key)}
+                      className="h-5 w-5"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <Separator />
+        </>
+      )}
 
       <div className="space-y-4">
         <div>

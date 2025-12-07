@@ -1,11 +1,13 @@
 import { randomUUID } from "crypto"
 import { removeBackground } from "@imgly/background-removal-node"
+import { TRPCError } from "@trpc/server"
 import sharp from "sharp"
 import toIco from "to-ico"
 import { z } from "zod"
 
 import { createTRPCRouter, protectedProcedure } from "@/lib/api/trpc"
 import { saveTempFile } from "@/lib/storage/temp"
+import { checkRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit"
 
 export const editorRouter = createTRPCRouter({
   removeBackground: protectedProcedure
@@ -15,6 +17,22 @@ export const editorRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const rateLimitKey = `bg-removal:${ctx.session.email}`
+      const rateLimit = checkRateLimit(
+        rateLimitKey,
+        RATE_LIMITS.BACKGROUND_REMOVAL,
+      )
+
+      if (!rateLimit.allowed) {
+        const resetInSeconds = Math.ceil(
+          (rateLimit.resetAt - Date.now()) / 1000,
+        )
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: `Rate limit exceeded. Try again in ${resetInSeconds} seconds.`,
+        })
+      }
+
       try {
         const base64Data = input.imageData.replace(
           /^data:image\/\w+;base64,/,
@@ -41,7 +59,10 @@ export const editorRouter = createTRPCRouter({
         }
       } catch (error) {
         console.error("Background removal failed:", error)
-        throw new Error("Failed to remove background")
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to remove background",
+        })
       }
     }),
 
@@ -107,7 +128,10 @@ export const editorRouter = createTRPCRouter({
         }
       } catch (error) {
         console.error("Favicon generation failed:", error)
-        throw new Error("Failed to generate favicons")
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to generate favicons",
+        })
       }
     }),
 
@@ -121,6 +145,19 @@ export const editorRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const rateLimitKey = `export:${ctx.session.email}`
+      const rateLimit = checkRateLimit(rateLimitKey, RATE_LIMITS.EXPORT)
+
+      if (!rateLimit.allowed) {
+        const resetInSeconds = Math.ceil(
+          (rateLimit.resetAt - Date.now()) / 1000,
+        )
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: `Rate limit exceeded. Try again in ${resetInSeconds} seconds.`,
+        })
+      }
+
       try {
         const base64Data = input.imageData.replace(
           /^data:image\/\w+;base64,/,
@@ -167,7 +204,10 @@ export const editorRouter = createTRPCRouter({
         }
       } catch (error) {
         console.error("Export failed:", error)
-        throw new Error("Failed to export image")
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to export image",
+        })
       }
     }),
 })

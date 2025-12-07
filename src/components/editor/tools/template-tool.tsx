@@ -1,12 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { FabricImage } from "fabric"
+import { FabricImage, Rect } from "fabric"
+import { Eye, EyeOff } from "lucide-react"
 
 import { useEditor } from "@/components/editor/editor-context"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Toggle } from "@/components/ui/toggle"
 import { socialMediaTemplates } from "@/lib/editor/templates"
 
 const CATEGORIES = [
@@ -16,12 +18,73 @@ const CATEGORIES = [
 
 type FitMode = "fit" | "fill" | "crop"
 
+const SAFE_ZONE_ID = "template-safe-zone-overlay"
+
 export function TemplateTool() {
   const { canvas, addToHistory } = useEditor()
   const [fitMode, setFitMode] = useState<FitMode>("fit")
+  const [showSafeZone, setShowSafeZone] = useState(false)
+  const [currentTemplate, setCurrentTemplate] = useState<
+    (typeof socialMediaTemplates)[0] | null
+  >(null)
+
+  const removeSafeZoneOverlay = () => {
+    if (!canvas) return
+
+    const objects = canvas.getObjects()
+    const safeZoneOverlay = objects.find(
+      (obj) => obj.get("data") === SAFE_ZONE_ID,
+    )
+    if (safeZoneOverlay) {
+      canvas.remove(safeZoneOverlay)
+      canvas.renderAll()
+    }
+  }
+
+  const toggleSafeZone = () => {
+    if (!canvas || !currentTemplate) return
+
+    if (showSafeZone) {
+      removeSafeZoneOverlay()
+      setShowSafeZone(false)
+    } else {
+      const safeZone = currentTemplate.safeZone ?? {
+        top: 50,
+        bottom: 50,
+        left: 50,
+        right: 50,
+      }
+
+      const overlay = new Rect({
+        left: safeZone.left,
+        top: safeZone.top,
+        width: currentTemplate.width - safeZone.left - safeZone.right,
+        height: currentTemplate.height - safeZone.top - safeZone.bottom,
+        fill: "transparent",
+        stroke: "#22c55e",
+        strokeWidth: 2,
+        strokeDashArray: [5, 5],
+        selectable: false,
+        evented: false,
+      })
+
+      overlay.set("data", SAFE_ZONE_ID)
+
+      canvas.add(overlay)
+      canvas.renderAll()
+      setShowSafeZone(true)
+    }
+  }
 
   const handleApplyTemplate = (template: (typeof socialMediaTemplates)[0]) => {
     if (!canvas) return
+
+    setCurrentTemplate(template)
+
+    if (showSafeZone) {
+      removeSafeZoneOverlay()
+      setShowSafeZone(false)
+    }
 
     const activeObject = canvas.getActiveObject()
 
@@ -126,6 +189,33 @@ export function TemplateTool() {
           {fitMode === "crop" && "Crop image to exact template dimensions"}
         </p>
       </div>
+
+      {currentTemplate && (
+        <>
+          <Separator />
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <h4 className="text-xs font-medium">Safe Zone Overlay</h4>
+              <Toggle
+                pressed={showSafeZone}
+                onPressedChange={toggleSafeZone}
+                size="sm"
+              >
+                {showSafeZone ? (
+                  <Eye className="h-3 w-3" />
+                ) : (
+                  <EyeOff className="h-3 w-3" />
+                )}
+              </Toggle>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              {showSafeZone
+                ? "Safe zone is visible (green dashed border)"
+                : "Show the safe zone where content won't be cropped"}
+            </p>
+          </div>
+        </>
+      )}
 
       <Separator />
 

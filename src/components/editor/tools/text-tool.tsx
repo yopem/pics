@@ -77,10 +77,18 @@ export function TextTool() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4 p-4">
+    <div
+      className="flex h-full flex-col gap-4 p-4"
+      role="region"
+      aria-label="Text tool options"
+    >
       <div>
         <h3 className="mb-3 text-sm font-medium">Add Text</h3>
-        <Button onClick={handleAddText} className="w-full">
+        <Button
+          onClick={handleAddText}
+          className="w-full"
+          aria-label="Add new text box to canvas"
+        >
           Add Text Box
         </Button>
       </div>
@@ -88,8 +96,14 @@ export function TextTool() {
       <Separator />
 
       <div>
-        <h3 className="mb-3 text-sm font-medium">Font Family</h3>
-        <div className="grid grid-cols-2 gap-2">
+        <h3 className="mb-3 text-sm font-medium" id="font-family-heading">
+          Font Family
+        </h3>
+        <div
+          className="grid grid-cols-2 gap-2"
+          role="group"
+          aria-labelledby="font-family-heading"
+        >
           {FONT_FAMILIES.map((family) => (
             <Button
               key={family}
@@ -97,6 +111,8 @@ export function TextTool() {
               size="sm"
               onClick={() => handleFontFamilyChange(family)}
               className="text-xs"
+              aria-label={`Set font to ${family}`}
+              aria-pressed={fontFamily === family}
             >
               {family}
             </Button>
@@ -108,30 +124,45 @@ export function TextTool() {
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <label className="text-xs font-medium">Font Size</label>
-          <span className="text-muted-foreground text-xs">{fontSize}px</span>
+          <label htmlFor="font-size-slider" className="text-xs font-medium">
+            Font Size
+          </label>
+          <span className="text-muted-foreground text-xs" aria-live="polite">
+            {fontSize}px
+          </span>
         </div>
         <Slider
+          id="font-size-slider"
           value={fontSize}
           onValueChange={handleFontSizeChange}
           min={8}
           max={120}
           step={1}
+          aria-label="Font size"
         />
       </div>
 
       <Separator />
 
       <div>
-        <label className="mb-2 block text-xs font-medium">Text Color</label>
+        <label
+          htmlFor="text-color-picker"
+          className="mb-2 block text-xs font-medium"
+        >
+          Text Color
+        </label>
         <div className="flex items-center gap-2">
           <input
+            id="text-color-picker"
             type="color"
             value={textColor}
             onChange={handleColorChange}
             className="h-10 w-full cursor-pointer rounded border"
+            aria-label="Choose text color"
           />
-          <span className="text-muted-foreground text-xs">{textColor}</span>
+          <span className="text-muted-foreground text-xs" aria-live="polite">
+            {textColor}
+          </span>
         </div>
       </div>
     </div>

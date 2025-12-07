@@ -139,16 +139,28 @@ export function CropTool() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4 p-4">
+    <div
+      className="flex h-full flex-col gap-4 p-4"
+      role="region"
+      aria-label="Crop tool options"
+    >
       <div>
-        <h3 className="mb-3 text-sm font-medium">Aspect Ratio</h3>
-        <div className="grid grid-cols-2 gap-2">
+        <h3 className="mb-3 text-sm font-medium" id="aspect-ratio-heading">
+          Aspect Ratio
+        </h3>
+        <div
+          className="grid grid-cols-2 gap-2"
+          role="group"
+          aria-labelledby="aspect-ratio-heading"
+        >
           {ASPECT_RATIOS.map((ratio) => (
             <Button
               key={ratio.label}
               variant={selectedRatio === ratio.value ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedRatio(ratio.value)}
+              aria-label={`Set aspect ratio to ${ratio.label}`}
+              aria-pressed={selectedRatio === ratio.value}
             >
               {ratio.label}
             </Button>
@@ -159,17 +171,33 @@ export function CropTool() {
       <Separator />
 
       <div>
-        <h3 className="mb-3 text-sm font-medium">Rotation</h3>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => handleRotate(-90)}>
+        <h3 className="mb-3 text-sm font-medium" id="rotation-heading">
+          Rotation
+        </h3>
+        <div
+          className="flex gap-2"
+          role="group"
+          aria-labelledby="rotation-heading"
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleRotate(-90)}
+            aria-label="Rotate left 90 degrees"
+          >
             Rotate Left
           </Button>
-          <Button variant="outline" size="sm" onClick={() => handleRotate(90)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleRotate(90)}
+            aria-label="Rotate right 90 degrees"
+          >
             Rotate Right
           </Button>
         </div>
         {rotation !== 0 && (
-          <p className="text-muted-foreground mt-2 text-xs">
+          <p className="text-muted-foreground mt-2 text-xs" aria-live="polite">
             Current: {rotation}°
           </p>
         )}
@@ -178,10 +206,19 @@ export function CropTool() {
       <Separator />
 
       <div className="mt-auto flex gap-2">
-        <Button variant="outline" onClick={handleCancel} className="flex-1">
+        <Button
+          variant="outline"
+          onClick={handleCancel}
+          className="flex-1"
+          aria-label="Cancel cropping"
+        >
           Cancel
         </Button>
-        <Button onClick={handleApplyCrop} className="flex-1">
+        <Button
+          onClick={handleApplyCrop}
+          className="flex-1"
+          aria-label="Apply crop"
+        >
           Apply Crop
         </Button>
       </div>

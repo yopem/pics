@@ -5,6 +5,7 @@ import z from "zod"
 import { createTRPCRouter, protectedProcedure } from "@/lib/api/trpc"
 import { projectsTable, projectVersionsTable } from "@/lib/db/schema"
 import { deleteProjectFolder } from "@/lib/storage/r2"
+import { checkRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit"
 
 export const projectsRouter = createTRPCRouter({
   create: protectedProcedure
@@ -190,6 +191,19 @@ export const projectsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const rateLimitKey = `save-version:${ctx.session.email}`
+      const rateLimit = checkRateLimit(rateLimitKey, RATE_LIMITS.PROJECT_SAVE)
+
+      if (!rateLimit.allowed) {
+        const resetInSeconds = Math.ceil(
+          (rateLimit.resetAt - Date.now()) / 1000,
+        )
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: `Rate limit exceeded. Try again in ${resetInSeconds} seconds.`,
+        })
+      }
+
       try {
         const project = await ctx.db.query.projectsTable.findFirst({
           where: (project, { and, eq }) =>

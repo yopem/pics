@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useRef } from "react"
-import { Canvas, Image as FabricImage } from "fabric"
+import { useEffect, useRef, useState } from "react"
+import type { Canvas as FabricCanvas, Image as FabricImage } from "fabric"
 import { Upload } from "lucide-react"
 
 import { useEditor } from "@/components/editor/editor-context"
@@ -11,14 +11,55 @@ export function EditorCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { canvas, setCanvas, addToHistory, isLoadingProject } = useEditor()
+  const [isFabricLoading, setIsFabricLoading] = useState(true)
+  const fabricRef = useRef<{
+    Canvas: typeof FabricCanvas
+    Image: typeof FabricImage
+  } | null>(null)
 
   useEffect(() => {
-    if (!canvasRef.current) return
+    let mounted = true
 
+    const loadFabric = async () => {
+      try {
+        const fabric = await import("fabric")
+        if (mounted) {
+          fabricRef.current = {
+            Canvas: fabric.Canvas,
+            Image: fabric.Image,
+          }
+          setIsFabricLoading(false)
+        }
+      } catch (error) {
+        console.error("Failed to load Fabric.js:", error)
+        setIsFabricLoading(false)
+      }
+    }
+
+    void loadFabric()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!canvasRef.current || !fabricRef.current || isFabricLoading) return
+
+    const { Canvas } = fabricRef.current
     const fabricCanvas = new Canvas(canvasRef.current, {
       width: 800,
       height: 600,
       backgroundColor: "#ffffff",
+      enableRetinaScaling: true,
+      renderOnAddRemove: true,
+      skipTargetFind: false,
+      objectCaching: true,
+      stateful: true,
+    })
+
+    fabricCanvas.on("object:added", (e) => {
+      e.target.objectCaching = true
     })
 
     setCanvas(fabricCanvas)
@@ -35,12 +76,13 @@ export function EditorCanvas() {
       void fabricCanvas.dispose()
       setCanvas(null)
     }
-  }, [setCanvas, addToHistory])
+  }, [setCanvas, addToHistory, isFabricLoading])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file || !canvas) return
+    if (!file || !canvas || !fabricRef.current) return
 
+    const { Image: FabricImage } = fabricRef.current
     const reader = new FileReader()
     reader.onload = async (event) => {
       const imgUrl = event.target?.result as string
@@ -83,7 +125,7 @@ export function EditorCanvas() {
         aria-label="Canvas for image editing"
       />
 
-      {isLoadingProject ? (
+      {isFabricLoading || isLoadingProject ? (
         <div
           className="absolute inset-0 flex items-center justify-center"
           role="status"
@@ -94,9 +136,13 @@ export function EditorCanvas() {
               className="border-muted border-t-primary mx-auto mb-4 size-16 animate-spin rounded-full border-4"
               aria-hidden="true"
             />
-            <h3 className="mb-2 text-lg font-semibold">Loading Project</h3>
+            <h3 className="mb-2 text-lg font-semibold">
+              {isFabricLoading ? "Loading Editor" : "Loading Project"}
+            </h3>
             <p className="text-muted-foreground text-sm">
-              Please wait while we load your project...
+              {isFabricLoading
+                ? "Initializing the editor..."
+                : "Please wait while we load your project..."}
             </p>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 
+import { EditorErrorBoundary } from "@/components/editor/error-boundary"
 import { auth } from "@/lib/auth/session"
 
 export default async function EditorLayout({
@@ -14,8 +15,10 @@ export default async function EditorLayout({
   }
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden">
-      {children}
-    </div>
+    <EditorErrorBoundary>
+      <div className="flex h-screen w-screen flex-col overflow-hidden">
+        {children}
+      </div>
+    </EditorErrorBoundary>
   )
 }
