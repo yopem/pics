@@ -40,9 +40,9 @@ const config: NextConfig = {
   experimental: {
     turbopackFileSystemCacheForDev: true,
   },
+  serverExternalPackages: ["sharp", "@imgly/background-removal-node"],
   reactCompiler: true,
   reactStrictMode: true,
-  cacheComponents: true,
   typescript: { ignoreBuildErrors: true },
   productionBrowserSourceMaps: false,
   compiler: {
