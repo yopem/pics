@@ -19,6 +19,20 @@ interface ShortcutItem {
 }
 
 const shortcuts: ShortcutItem[] = [
+  // File operations
+  { keys: ["Ctrl/Cmd", "S"], description: "Save project", category: "File" },
+  {
+    keys: ["Ctrl/Cmd", "E"],
+    description: "Export image",
+    category: "File",
+  },
+  {
+    keys: ["Ctrl/Cmd", "O"],
+    description: "Open project",
+    category: "File",
+  },
+
+  // Editing
   { keys: ["Ctrl/Cmd", "Z"], description: "Undo", category: "Editing" },
   { keys: ["Ctrl/Cmd", "Y"], description: "Redo", category: "Editing" },
   {
@@ -26,8 +40,39 @@ const shortcuts: ShortcutItem[] = [
     description: "Redo (alternative)",
     category: "Editing",
   },
-  { keys: ["Ctrl/Cmd", "S"], description: "Save project", category: "File" },
+  {
+    keys: ["Ctrl/Cmd", "A"],
+    description: "Select all",
+    category: "Editing",
+  },
+  { keys: ["Ctrl/Cmd", "C"], description: "Copy", category: "Editing" },
+  { keys: ["Ctrl/Cmd", "V"], description: "Paste", category: "Editing" },
+  { keys: ["Ctrl/Cmd", "X"], description: "Cut", category: "Editing" },
+  { keys: ["Delete"], description: "Delete selected", category: "Editing" },
+  { keys: ["Backspace"], description: "Delete selected", category: "Editing" },
+
+  // View
   { keys: ["Tab"], description: "Toggle sidebars", category: "View" },
+  { keys: ["Ctrl/Cmd", "0"], description: "Fit to screen", category: "View" },
+  { keys: ["Ctrl/Cmd", "1"], description: "100% zoom", category: "View" },
+  { keys: ["Ctrl/Cmd", "+"], description: "Zoom in", category: "View" },
+  { keys: ["Ctrl/Cmd", "-"], description: "Zoom out", category: "View" },
+  { keys: ["Space"], description: "Pan (hold and drag)", category: "View" },
+
+  // Tools
+  { keys: ["C"], description: "Crop tool", category: "Tools" },
+  { keys: ["F"], description: "Filters tool", category: "Tools" },
+  { keys: ["B"], description: "Background tool", category: "Tools" },
+  { keys: ["T"], description: "Text tool", category: "Tools" },
+  { keys: ["V"], description: "Select tool", category: "Tools" },
+
+  // Help
+  { keys: ["?"], description: "Show shortcuts", category: "Help" },
+  {
+    keys: ["Ctrl/Cmd", "/"],
+    description: "Show shortcuts",
+    category: "Help",
+  },
 ]
 
 function KeyBadge({ label }: { label: string }) {
@@ -64,7 +109,7 @@ export function KeyboardShortcutsDialog() {
             Keyboard Shortcuts
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 px-6 pb-6">
+        <div className="max-h-[60vh] space-y-4 overflow-y-auto px-6 pb-6">
           {Object.entries(groupedShortcuts).map(([category, items]) => (
             <div key={category}>
               <h3 className="mb-3 text-sm font-semibold">{category}</h3>

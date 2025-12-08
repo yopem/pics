@@ -160,7 +160,11 @@ export function BackgroundReplacementTool() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4 p-4">
+    <div
+      className="flex h-full flex-col gap-4 p-4"
+      role="region"
+      aria-label="Background replacement tool options"
+    >
       <div>
         <h3 className="mb-3 text-sm font-medium">Background Replacement</h3>
         <p className="text-muted-foreground mb-4 text-xs">
@@ -169,16 +173,26 @@ export function BackgroundReplacementTool() {
       </div>
 
       <Tabs defaultValue="solid" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList
+          className="grid w-full grid-cols-3"
+          role="tablist"
+          aria-label="Background type"
+        >
           <TabsTrigger value="solid">Solid</TabsTrigger>
           <TabsTrigger value="gradient">Gradient</TabsTrigger>
           <TabsTrigger value="image">Image</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="solid" className="space-y-4">
+        <TabsContent value="solid" className="space-y-4" role="tabpanel">
           <div>
-            <h4 className="mb-3 text-xs font-medium">Preset Colors</h4>
-            <div className="grid grid-cols-4 gap-2">
+            <h4 className="mb-3 text-xs font-medium" id="preset-colors-heading">
+              Preset Colors
+            </h4>
+            <div
+              className="grid grid-cols-4 gap-2"
+              role="group"
+              aria-labelledby="preset-colors-heading"
+            >
               {PRESET_COLORS.map((color) => (
                 <button
                   key={color.value}
@@ -189,6 +203,8 @@ export function BackgroundReplacementTool() {
                   className="border-border hover:border-primary group relative aspect-square rounded-md border-2 transition-all"
                   style={{ backgroundColor: color.value }}
                   title={color.name}
+                  aria-label={`Set background to ${color.name}`}
+                  aria-pressed={selectedColor === color.value}
                 >
                   {selectedColor === color.value && (
                     <div className="bg-primary bg-opacity-20 absolute inset-0 flex items-center justify-center rounded-md">
@@ -203,18 +219,26 @@ export function BackgroundReplacementTool() {
           <Separator />
 
           <div>
-            <h4 className="mb-3 text-xs font-medium">Custom Color</h4>
-            <div className="flex gap-2">
+            <h4 className="mb-3 text-xs font-medium" id="custom-color-heading">
+              Custom Color
+            </h4>
+            <div
+              className="flex gap-2"
+              role="group"
+              aria-labelledby="custom-color-heading"
+            >
               <input
                 type="color"
                 value={customColor}
                 onChange={(e) => setCustomColor(e.target.value)}
                 className="border-border h-10 w-20 cursor-pointer rounded-md border-2"
+                aria-label="Choose custom background color"
               />
               <Button
                 variant="outline"
                 className="flex-1"
                 onClick={() => handleSolidColor(customColor)}
+                aria-label="Apply selected custom color"
               >
                 Apply Custom Color
               </Button>
@@ -222,10 +246,19 @@ export function BackgroundReplacementTool() {
           </div>
         </TabsContent>
 
-        <TabsContent value="gradient" className="space-y-4">
+        <TabsContent value="gradient" className="space-y-4" role="tabpanel">
           <div>
-            <h4 className="mb-3 text-xs font-medium">Preset Gradients</h4>
-            <div className="grid grid-cols-2 gap-3">
+            <h4
+              className="mb-3 text-xs font-medium"
+              id="preset-gradients-heading"
+            >
+              Preset Gradients
+            </h4>
+            <div
+              className="grid grid-cols-2 gap-3"
+              role="group"
+              aria-labelledby="preset-gradients-heading"
+            >
               {PRESET_GRADIENTS.map((gradient) => (
                 <button
                   key={gradient.name}
@@ -235,6 +268,7 @@ export function BackgroundReplacementTool() {
                     background: `linear-gradient(${gradient.angle}deg, ${gradient.colors[0]}, ${gradient.colors[1]})`,
                   }}
                   title={gradient.name}
+                  aria-label={`Apply ${gradient.name} gradient background`}
                 >
                   <div className="bg-opacity-0 group-hover:bg-opacity-10 absolute inset-0 flex items-center justify-center rounded-md bg-black transition-all">
                     <span className="text-background text-xs font-medium opacity-0 transition-opacity group-hover:opacity-100">
@@ -247,13 +281,16 @@ export function BackgroundReplacementTool() {
           </div>
         </TabsContent>
 
-        <TabsContent value="image" className="space-y-4">
+        <TabsContent value="image" className="space-y-4" role="tabpanel">
           <div>
             <h4 className="mb-3 text-xs font-medium">
               Upload Background Image
             </h4>
             <label className="border-border hover:border-primary flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors">
-              <Upload className="text-muted-foreground mb-2 h-8 w-8" />
+              <Upload
+                className="text-muted-foreground mb-2 h-8 w-8"
+                aria-hidden="true"
+              />
               <span className="text-muted-foreground mb-1 text-sm font-medium">
                 Click to upload
               </span>
@@ -265,6 +302,7 @@ export function BackgroundReplacementTool() {
                 accept="image/png,image/jpeg,image/webp"
                 onChange={handleImageUpload}
                 className="hidden"
+                aria-label="Upload background image"
               />
             </label>
           </div>
@@ -282,7 +320,11 @@ export function BackgroundReplacementTool() {
 
       <Separator />
 
-      <Button variant="outline" onClick={handleRemoveBackground}>
+      <Button
+        variant="outline"
+        onClick={handleRemoveBackground}
+        aria-label="Remove background and reset to transparent"
+      >
         Remove Background
       </Button>
 

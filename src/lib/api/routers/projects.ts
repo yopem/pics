@@ -181,6 +181,67 @@ export const projectsRouter = createTRPCRouter({
       }
     }),
 
+  getStorageQuota: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const projects = await ctx.db.query.projectsTable.findMany({
+        where: (project, { eq }) => eq(project.userId, ctx.session.id),
+      })
+
+      const versions = await ctx.db.query.projectVersionsTable.findMany({
+        where: (version, { inArray }) =>
+          inArray(
+            version.projectId,
+            projects.map((p) => p.id),
+          ),
+      })
+
+      // Calculate storage usage (rough estimate)
+      let totalBytes = 0
+
+      // Estimate from thumbnails
+      projects.forEach((project) => {
+        if (project.thumbnail) {
+          const base64Length = project.thumbnail.split(",")[1]?.length ?? 0
+          totalBytes += (base64Length * 3) / 4
+        }
+        if (project.originalImageUrl) {
+          totalBytes += 1024 * 1024 // Rough estimate: 1MB per original
+        }
+      })
+
+      // Estimate from versions
+      versions.forEach((version) => {
+        if (version.editedImageUrl) {
+          totalBytes += 1024 * 1024 // Rough estimate: 1MB per edited image
+        }
+        // Canvas state size
+        const stateSize = JSON.stringify(version.canvasState).length
+        totalBytes += stateSize
+      })
+
+      // Define quota (e.g., 1GB for free tier)
+      const quotaBytes = 1024 * 1024 * 1024 // 1GB
+      const usedBytes = totalBytes
+      const usedPercentage = (usedBytes / quotaBytes) * 100
+
+      return {
+        used: usedBytes,
+        total: quotaBytes,
+        percentage: Math.min(usedPercentage, 100),
+        projectCount: projects.length,
+        versionCount: versions.length,
+      }
+    } catch (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to get storage quota",
+      })
+    }
+  }),
+
   saveVersion: protectedProcedure
     .input(
       z.object({

@@ -7,6 +7,7 @@ import { format } from "date-fns"
 import {
   Clock,
   FileImage,
+  HardDrive,
   MoreVertical,
   Plus,
   Search,
@@ -39,12 +40,22 @@ export function ProjectsDashboard() {
 
   const trpc = useTRPC()
   const projectsQuery = useQuery(trpc.projects.list.queryOptions())
+  const storageQuery = useQuery(trpc.projects.getStorageQuota.queryOptions())
   const deleteMutation = useMutation(trpc.projects.delete.mutationOptions())
 
   const projects = projectsQuery.data ?? []
+  const storage = storageQuery.data
   const filteredProjects = projects.filter((project) =>
     project.name.toLowerCase().includes(searchQuery.toLowerCase()),
   )
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return "0 B"
+    const k = 1024
+    const sizes = ["B", "KB", "MB", "GB"]
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
+  }
 
   const handleCreateNew = () => {
     router.push("/editor")
@@ -86,6 +97,43 @@ export function ProjectsDashboard() {
           New Project
         </Button>
       </div>
+
+      {storage && (
+        <Card className="mb-6 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <HardDrive className="text-muted-foreground h-5 w-5" />
+              <div>
+                <p className="text-sm font-medium">Storage Usage</p>
+                <p className="text-muted-foreground text-xs">
+                  {formatBytes(storage.used)} of {formatBytes(storage.total)}{" "}
+                  used
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-medium">
+                {storage.percentage.toFixed(1)}%
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {storage.projectCount} projects, {storage.versionCount} versions
+              </p>
+            </div>
+          </div>
+          <div className="bg-secondary mt-3 h-2 w-full overflow-hidden rounded-full">
+            <div
+              className={`h-full transition-all ${
+                storage.percentage > 90
+                  ? "bg-destructive"
+                  : storage.percentage > 75
+                    ? "bg-yellow-500"
+                    : "bg-primary"
+              }`}
+              style={{ width: `${Math.min(storage.percentage, 100)}%` }}
+            />
+          </div>
+        </Card>
+      )}
 
       <div className="mb-6 flex items-center gap-4">
         <div className="relative flex-1">

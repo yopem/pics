@@ -42,6 +42,7 @@ interface EditorContextValue {
   setIsDirty: (dirty: boolean) => void
   undo: () => void
   redo: () => void
+  jumpToState: (index: number) => void
   addToHistory: (state: string) => void
   saveProject: () => Promise<void>
   showLeftSidebar: boolean
@@ -133,6 +134,21 @@ export function EditorProvider({
     setHistoryIndex(newIndex)
     setIsDirty(true)
   }, [canvas, history, historyIndex])
+
+  const jumpToState = useCallback(
+    (index: number) => {
+      if (!canvas || index < 0 || index >= history.length) return
+
+      const state = history[index]
+
+      void canvas.loadFromJSON(state.canvasState, () => {
+        canvas.renderAll()
+      })
+      setHistoryIndex(index)
+      setIsDirty(true)
+    },
+    [canvas, history],
+  )
 
   const saveProject = useCallback(async () => {
     if (!canvas || !isDirty) return
@@ -243,6 +259,7 @@ export function EditorProvider({
     setIsDirty,
     undo,
     redo,
+    jumpToState,
     addToHistory,
     saveProject,
     showLeftSidebar,

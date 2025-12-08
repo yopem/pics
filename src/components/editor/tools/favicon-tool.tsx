@@ -2,13 +2,14 @@
 
 import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
+import JSZip from "jszip"
 
 import { useEditor } from "@/components/editor/editor-context"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Toggle } from "@/components/ui/toggle"
 import {
-  downloadAsFile,
   generateHTMLSnippet,
   generateWebManifest,
 } from "@/lib/editor/favicon-generator"
@@ -31,6 +32,11 @@ export function FaviconTool() {
   const [generateFormat, setGenerateFormat] = useState<"all" | "png" | "ico">(
     "all",
   )
+  const [appName, setAppName] = useState("My App")
+  const [shortName, setShortName] = useState("App")
+  const [themeColor, setThemeColor] = useState("#ffffff")
+  const [backgroundColor, setBackgroundColor] = useState("#ffffff")
+  const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null)
 
   const trpc = useTRPC()
   const generateFaviconsMutation = useMutation(
@@ -41,6 +47,13 @@ export function FaviconTool() {
     if (!canvas) return
     canvas.setDimensions({ width: 512, height: 512 })
     canvas.renderAll()
+    updatePreview()
+  }
+
+  const updatePreview = () => {
+    if (!canvas) return
+    const dataUrl = canvas.toDataURL()
+    setPreviewDataUrl(dataUrl)
   }
 
   const toggleSize = (sizeName: string) => {
@@ -69,43 +82,99 @@ export function FaviconTool() {
         imageData: dataUrl,
       })
 
-      result.favicons
-        .filter((favicon) => {
-          if (generateFormat === "all")
-            return selectedSizes.includes(favicon.name)
-          if (generateFormat === "png")
-            return (
-              selectedSizes.includes(favicon.name) &&
-              favicon.name.endsWith(".png")
-            )
+      // Create a ZIP file
+      const zip = new JSZip()
+
+      // Add favicon files
+      const faviconFiles = result.favicons.filter((favicon) => {
+        if (generateFormat === "all")
+          return selectedSizes.includes(favicon.name)
+        if (generateFormat === "png")
           return (
             selectedSizes.includes(favicon.name) &&
-            favicon.name.endsWith(".ico")
+            favicon.name.endsWith(".png")
           )
-        })
-        .forEach((favicon) => {
-          const link = document.createElement("a")
-          link.href = favicon.data
-          link.download = favicon.name
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-        })
+        return (
+          selectedSizes.includes(favicon.name) && favicon.name.endsWith(".ico")
+        )
+      })
 
+      faviconFiles.forEach((favicon) => {
+        const base64Data = favicon.data.split(",")[1]
+        zip.file(favicon.name, base64Data, { base64: true })
+      })
+
+      // Add manifest.json
       const manifest = generateWebManifest(
-        "My App",
-        "App",
-        "#ffffff",
-        "#ffffff",
+        appName,
+        shortName,
+        themeColor,
+        backgroundColor,
       )
-      downloadAsFile(
-        JSON.stringify(manifest, null, 2),
-        "manifest.json",
-        "application/json",
-      )
+      zip.file("manifest.json", JSON.stringify(manifest, null, 2))
 
-      const htmlSnippet = generateHTMLSnippet("My App")
-      downloadAsFile(htmlSnippet, "favicon-snippet.html", "text/html")
+      // Add HTML snippet
+      const htmlSnippet = generateHTMLSnippet(appName)
+      zip.file("favicon-snippet.html", htmlSnippet)
+
+      // Add README with instructions
+      const readme = `# Favicon Package
+
+This package contains all the necessary files for your website's favicon.
+
+## Files Included
+
+${faviconFiles.map((f) => `- ${f.name}`).join("\n")}
+- manifest.json
+- favicon-snippet.html
+
+## Installation Instructions
+
+1. Copy all favicon files to your website's root directory or /public folder.
+
+2. Add the following code to your HTML <head> section:
+   (See favicon-snippet.html for the complete snippet)
+
+3. Update your manifest.json if you already have one, or include the provided one.
+
+4. For Next.js/React projects:
+   - Place favicon files in the /public folder
+   - Import in your layout or _document file
+
+5. Test your favicons:
+   - Clear browser cache
+   - Visit your website
+   - Check different devices and browsers
+
+## Customization
+
+You can edit manifest.json to customize:
+- name: Full application name
+- short_name: Short name (max 12 characters)
+- theme_color: Browser theme color
+- background_color: Splash screen background
+
+## Browser Support
+
+- favicon.ico: All browsers
+- PNG favicons: Modern browsers
+- apple-touch-icon: iOS Safari
+- android-chrome: Android Chrome
+
+Generated with Yopem Pics Image Editor
+`
+      zip.file("README.md", readme)
+
+      // Generate and download ZIP
+      const blob = await zip.generateAsync({ type: "blob" })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `${shortName.toLowerCase().replace(/\s+/g, "-")}-favicons.zip`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
     } catch (error) {
       console.error("Failed to generate favicons:", error)
     }
@@ -126,67 +195,239 @@ export function FaviconTool() {
 
       <Separator />
 
-      <div>
-        <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-xs font-medium">Format</h4>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant={generateFormat === "all" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setGenerateFormat("all")}
-          >
-            All
-          </Button>
-          <Button
-            variant={generateFormat === "png" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setGenerateFormat("png")}
-          >
-            PNG
-          </Button>
-          <Button
-            variant={generateFormat === "ico" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setGenerateFormat("ico")}
-          >
-            ICO
-          </Button>
-        </div>
-      </div>
+      <Tabs defaultValue="config" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="config">Configuration</TabsTrigger>
+          <TabsTrigger value="preview">Preview</TabsTrigger>
+        </TabsList>
 
-      <Separator />
-
-      <div>
-        <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-xs font-medium">Sizes to Generate</h4>
-          <Button onClick={toggleAll} variant="ghost" size="sm">
-            {selectedSizes.length === FAVICON_SIZES.length
-              ? "Deselect All"
-              : "Select All"}
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {FAVICON_SIZES.map((size) => (
-            <div
-              key={size.name}
-              className="flex items-center justify-between gap-2"
-            >
-              <Toggle
-                pressed={selectedSizes.includes(size.name)}
-                onPressedChange={() => toggleSize(size.name)}
-                size="sm"
-                className="flex-1 justify-start"
-              >
-                <span className="text-xs">{size.name}</span>
-              </Toggle>
-              <span className="text-muted-foreground text-xs">
-                {size.size}×{size.size}
-              </span>
+        <TabsContent value="config" className="space-y-4">
+          {/* Web Manifest Fields */}
+          <div>
+            <h4 className="mb-2 text-xs font-medium">App Information</h4>
+            <div className="space-y-2">
+              <div>
+                <label className="text-muted-foreground mb-1 block text-xs">
+                  App Name
+                </label>
+                <input
+                  type="text"
+                  value={appName}
+                  onChange={(e) => setAppName(e.target.value)}
+                  className="border-input bg-background h-8 w-full rounded-md border px-2 text-sm"
+                  placeholder="My Awesome App"
+                />
+              </div>
+              <div>
+                <label className="text-muted-foreground mb-1 block text-xs">
+                  Short Name
+                </label>
+                <input
+                  type="text"
+                  value={shortName}
+                  onChange={(e) => setShortName(e.target.value)}
+                  className="border-input bg-background h-8 w-full rounded-md border px-2 text-sm"
+                  placeholder="App"
+                  maxLength={12}
+                />
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Max 12 characters
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-muted-foreground mb-1 block text-xs">
+                    Theme Color
+                  </label>
+                  <input
+                    type="color"
+                    value={themeColor}
+                    onChange={(e) => setThemeColor(e.target.value)}
+                    className="h-8 w-full rounded-md border"
+                  />
+                </div>
+                <div>
+                  <label className="text-muted-foreground mb-1 block text-xs">
+                    Background Color
+                  </label>
+                  <input
+                    type="color"
+                    value={backgroundColor}
+                    onChange={(e) => setBackgroundColor(e.target.value)}
+                    className="h-8 w-full rounded-md border"
+                  />
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+
+          <Separator />
+
+          {/* Format Selection */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <h4 className="text-xs font-medium">Format</h4>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={generateFormat === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setGenerateFormat("all")}
+              >
+                All
+              </Button>
+              <Button
+                variant={generateFormat === "png" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setGenerateFormat("png")}
+              >
+                PNG
+              </Button>
+              <Button
+                variant={generateFormat === "ico" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setGenerateFormat("ico")}
+              >
+                ICO
+              </Button>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Sizes Selection */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <h4 className="text-xs font-medium">Sizes to Generate</h4>
+              <Button onClick={toggleAll} variant="ghost" size="sm">
+                {selectedSizes.length === FAVICON_SIZES.length
+                  ? "Deselect All"
+                  : "Select All"}
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {FAVICON_SIZES.map((size) => (
+                <div
+                  key={size.name}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <Toggle
+                    pressed={selectedSizes.includes(size.name)}
+                    onPressedChange={() => toggleSize(size.name)}
+                    size="sm"
+                    className="flex-1 justify-start"
+                  >
+                    <span className="text-xs">{size.name}</span>
+                  </Toggle>
+                  <span className="text-muted-foreground text-xs">
+                    {size.size}×{size.size}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="preview" className="space-y-4">
+          <div>
+            <h4 className="mb-2 text-xs font-medium">Browser Preview</h4>
+            <p className="text-muted-foreground mb-3 text-xs">
+              Preview how your favicon will look in different contexts
+            </p>
+          </div>
+
+          <div className="space-y-4 rounded-md border p-4">
+            {/* Browser Tab Preview */}
+            <div>
+              <p className="text-muted-foreground mb-2 text-xs font-medium">
+                Browser Tab
+              </p>
+              <div className="bg-muted flex items-center gap-2 rounded-md p-2">
+                {previewDataUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={previewDataUrl}
+                    alt="Favicon preview"
+                    className="h-4 w-4"
+                  />
+                ) : (
+                  <div className="bg-background h-4 w-4 rounded" />
+                )}
+                <span className="text-sm">{appName}</span>
+              </div>
+            </div>
+
+            {/* Bookmark Bar Preview */}
+            <div>
+              <p className="text-muted-foreground mb-2 text-xs font-medium">
+                Bookmark Bar
+              </p>
+              <div className="bg-muted flex items-center gap-2 rounded-md p-2">
+                {previewDataUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={previewDataUrl}
+                    alt="Favicon preview"
+                    className="h-5 w-5"
+                  />
+                ) : (
+                  <div className="bg-background h-5 w-5 rounded" />
+                )}
+                <span className="text-xs">{shortName}</span>
+              </div>
+            </div>
+
+            {/* iOS Home Screen Preview */}
+            <div>
+              <p className="text-muted-foreground mb-2 text-xs font-medium">
+                iOS Home Screen (180×180)
+              </p>
+              <div className="flex items-center gap-2">
+                {previewDataUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={previewDataUrl}
+                    alt="iOS icon preview"
+                    className="h-16 w-16 rounded-xl"
+                  />
+                ) : (
+                  <div className="bg-background h-16 w-16 rounded-xl border" />
+                )}
+                <div>
+                  <p className="text-sm font-medium">{appName}</p>
+                  <p className="text-muted-foreground text-xs">Tap to open</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Android Home Screen Preview */}
+            <div>
+              <p className="text-muted-foreground mb-2 text-xs font-medium">
+                Android Home Screen (192×192)
+              </p>
+              <div className="flex items-center gap-2">
+                {previewDataUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={previewDataUrl}
+                    alt="Android icon preview"
+                    className="h-16 w-16 rounded-lg"
+                  />
+                ) : (
+                  <div className="bg-background h-16 w-16 rounded-lg border" />
+                )}
+                <div>
+                  <p className="text-sm font-medium">{appName}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Button onClick={updatePreview} variant="outline" className="w-full">
+            Refresh Preview
+          </Button>
+        </TabsContent>
+      </Tabs>
 
       <Separator />
 
@@ -198,7 +439,7 @@ export function FaviconTool() {
       >
         {generateFaviconsMutation.isPending
           ? "Generating..."
-          : "Generate & Download"}
+          : "Generate & Download ZIP"}
       </Button>
 
       <div className="text-muted-foreground mt-2 text-xs">

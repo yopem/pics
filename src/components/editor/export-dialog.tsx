@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 
 import { Button } from "@/components/ui/button"
@@ -31,17 +31,114 @@ export function ExportDialog({
 }: ExportDialogProps) {
   const [format, setFormat] = useState<"png" | "jpg" | "webp">("png")
   const [quality, setQuality] = useState(90)
+  const [width, setWidth] = useState(0)
+  const [height, setHeight] = useState(0)
+  const [maintainAspectRatio, setMaintainAspectRatio] = useState(true)
+  const [originalWidth, setOriginalWidth] = useState(0)
+  const [originalHeight, setOriginalHeight] = useState(0)
+  const [estimatedFileSize, setEstimatedFileSize] = useState<string>("")
 
   const trpc = useTRPC()
   const exportMutation = useMutation(trpc.editor.exportImage.mutationOptions())
+
+  // Extract dimensions from canvas data URL
+  useEffect(() => {
+    if (!canvasDataUrl || !open) return
+
+    const img = new Image()
+    img.onload = () => {
+      setOriginalWidth(img.width)
+      setOriginalHeight(img.height)
+      setWidth(img.width)
+      setHeight(img.height)
+      estimateFileSize(canvasDataUrl, format, quality)
+    }
+    img.src = canvasDataUrl
+  }, [canvasDataUrl, open])
+
+  // Re-estimate file size when format or quality changes
+  useEffect(() => {
+    if (canvasDataUrl) {
+      estimateFileSize(canvasDataUrl, format, quality)
+    }
+  }, [format, quality, canvasDataUrl])
+
+  const estimateFileSize = (dataUrl: string, fmt: string, qual: number) => {
+    try {
+      // Extract base64 data
+      const base64 = dataUrl.split(",")[1]
+      if (!base64) return
+
+      // Decode base64 to get approximate byte size
+      const byteSize = (base64.length * 3) / 4
+
+      // Apply format and quality multipliers
+      let estimatedSize = byteSize
+      if (fmt === "jpg" || fmt === "webp") {
+        estimatedSize = byteSize * (qual / 100) * 0.7 // JPEG/WebP compression
+      } else {
+        estimatedSize = byteSize * 0.9 // PNG compression
+      }
+
+      // Format size
+      if (estimatedSize < 1024) {
+        setEstimatedFileSize(`${Math.round(estimatedSize)} B`)
+      } else if (estimatedSize < 1024 * 1024) {
+        setEstimatedFileSize(`${(estimatedSize / 1024).toFixed(1)} KB`)
+      } else {
+        setEstimatedFileSize(`${(estimatedSize / (1024 * 1024)).toFixed(2)} MB`)
+      }
+    } catch (error) {
+      console.error("Failed to estimate file size:", error)
+      setEstimatedFileSize("")
+    }
+  }
+
+  const handleWidthChange = (value: string) => {
+    const newWidth = parseInt(value) || 0
+    setWidth(newWidth)
+    if (maintainAspectRatio && originalWidth > 0) {
+      const aspectRatio = originalHeight / originalWidth
+      setHeight(Math.round(newWidth * aspectRatio))
+    }
+  }
+
+  const handleHeightChange = (value: string) => {
+    const newHeight = parseInt(value) || 0
+    setHeight(newHeight)
+    if (maintainAspectRatio && originalHeight > 0) {
+      const aspectRatio = originalWidth / originalHeight
+      setWidth(Math.round(newHeight * aspectRatio))
+    }
+  }
 
   const handleExport = async () => {
     if (!canvasDataUrl) return
 
     try {
+      let exportDataUrl = canvasDataUrl
+
+      // Resize if dimensions changed
+      if (width !== originalWidth || height !== originalHeight) {
+        const img = new Image()
+        img.src = canvasDataUrl
+        await new Promise((resolve) => {
+          img.onload = resolve
+        })
+
+        const canvas = document.createElement("canvas")
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext("2d")
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height)
+          exportDataUrl = canvas.toDataURL(`image/${format}`, quality / 100)
+        }
+      }
+
       const result = await exportMutation.mutateAsync({
         projectId,
-        imageData: canvasDataUrl,
+        imageData: exportDataUrl,
         format,
         quality,
       })
@@ -61,96 +158,150 @@ export function ExportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Export Image</DialogTitle>
           <DialogDescription>
-            Choose your export format and quality settings
+            Choose your export format, dimensions, and quality settings
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs
-          value={format}
-          onValueChange={(v) => setFormat(v as "png" | "jpg" | "webp")}
-        >
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="png">PNG</TabsTrigger>
-            <TabsTrigger value="jpg">JPEG</TabsTrigger>
-            <TabsTrigger value="webp">WebP</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="png" className="space-y-4">
-            <p className="text-muted-foreground text-sm">
-              PNG format supports transparency and lossless compression.
-            </p>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Quality</label>
-                <span className="text-muted-foreground text-sm">
-                  {quality}%
-                </span>
+        <div className="space-y-4">
+          {/* Dimensions Section */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium">Dimensions</h4>
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <label className="text-muted-foreground mb-1 block text-xs">
+                  Width
+                </label>
+                <input
+                  type="number"
+                  value={width}
+                  onChange={(e) => handleWidthChange(e.target.value)}
+                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                  min={1}
+                />
               </div>
-              <Slider
-                value={quality}
-                onValueChange={(v) => {
-                  const newValue = Array.isArray(v) ? v[0] : v
-                  setQuality(newValue ?? 90)
-                }}
-                min={1}
-                max={100}
-                step={1}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="jpg" className="space-y-4">
-            <p className="text-muted-foreground text-sm">
-              JPEG format is best for photographs with smaller file sizes.
-            </p>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Quality</label>
-                <span className="text-muted-foreground text-sm">
-                  {quality}%
-                </span>
+              <div className="mt-5">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setMaintainAspectRatio(!maintainAspectRatio)}
+                  title={
+                    maintainAspectRatio
+                      ? "Unlock aspect ratio"
+                      : "Lock aspect ratio"
+                  }
+                >
+                  {maintainAspectRatio ? "🔒" : "🔓"}
+                </Button>
               </div>
-              <Slider
-                value={quality}
-                onValueChange={(v) => {
-                  const newValue = Array.isArray(v) ? v[0] : v
-                  setQuality(newValue ?? 90)
-                }}
-                min={1}
-                max={100}
-                step={1}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="webp" className="space-y-4">
-            <p className="text-muted-foreground text-sm">
-              WebP format offers excellent compression with quality retention.
-            </p>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Quality</label>
-                <span className="text-muted-foreground text-sm">
-                  {quality}%
-                </span>
+              <div className="flex-1">
+                <label className="text-muted-foreground mb-1 block text-xs">
+                  Height
+                </label>
+                <input
+                  type="number"
+                  value={height}
+                  onChange={(e) => handleHeightChange(e.target.value)}
+                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                  min={1}
+                />
               </div>
-              <Slider
-                value={quality}
-                onValueChange={(v) => {
-                  const newValue = Array.isArray(v) ? v[0] : v
-                  setQuality(newValue ?? 90)
-                }}
-                min={1}
-                max={100}
-                step={1}
-              />
             </div>
-          </TabsContent>
-        </Tabs>
+            {estimatedFileSize && (
+              <p className="text-muted-foreground text-xs">
+                Estimated file size:{" "}
+                <span className="font-medium">{estimatedFileSize}</span>
+              </p>
+            )}
+          </div>
+
+          {/* Format and Quality Section */}
+          <Tabs
+            value={format}
+            onValueChange={(v) => setFormat(v as "png" | "jpg" | "webp")}
+          >
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="png">PNG</TabsTrigger>
+              <TabsTrigger value="jpg">JPEG</TabsTrigger>
+              <TabsTrigger value="webp">WebP</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="png" className="space-y-4">
+              <p className="text-muted-foreground text-sm">
+                PNG format supports transparency and lossless compression.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Quality</label>
+                  <span className="text-muted-foreground text-sm">
+                    {quality}%
+                  </span>
+                </div>
+                <Slider
+                  value={quality}
+                  onValueChange={(v) => {
+                    const newValue = Array.isArray(v) ? v[0] : v
+                    setQuality(newValue ?? 90)
+                  }}
+                  min={1}
+                  max={100}
+                  step={1}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="jpg" className="space-y-4">
+              <p className="text-muted-foreground text-sm">
+                JPEG format is best for photographs with smaller file sizes.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Quality</label>
+                  <span className="text-muted-foreground text-sm">
+                    {quality}%
+                  </span>
+                </div>
+                <Slider
+                  value={quality}
+                  onValueChange={(v) => {
+                    const newValue = Array.isArray(v) ? v[0] : v
+                    setQuality(newValue ?? 90)
+                  }}
+                  min={1}
+                  max={100}
+                  step={1}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="webp" className="space-y-4">
+              <p className="text-muted-foreground text-sm">
+                WebP format offers excellent compression with quality retention.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Quality</label>
+                  <span className="text-muted-foreground text-sm">
+                    {quality}%
+                  </span>
+                </div>
+                <Slider
+                  value={quality}
+                  onValueChange={(v) => {
+                    const newValue = Array.isArray(v) ? v[0] : v
+                    setQuality(newValue ?? 90)
+                  }}
+                  min={1}
+                  max={100}
+                  step={1}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
