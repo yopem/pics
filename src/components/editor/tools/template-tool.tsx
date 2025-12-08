@@ -20,6 +20,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Toggle } from "@/components/ui/toggle"
 import { socialMediaTemplates } from "@/lib/editor/templates"
 import { useTRPC } from "@/lib/trpc/client"
+import { useToast } from "@/lib/utils/toast"
 
 const CATEGORIES = [
   "My Templates",
@@ -44,6 +45,7 @@ export function TemplateTool() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [templateToDelete, setTemplateToDelete] = useState<string | null>(null)
 
+  const { showToast, showError } = useToast()
   const trpc = useTRPC()
   const customTemplatesQuery = useQuery(
     trpc.customTemplates.list.queryOptions(),
@@ -230,8 +232,9 @@ export function TemplateTool() {
       setSaveDialogOpen(false)
       setTemplateName("")
       setTemplatePlatform("")
+      showToast("Template saved successfully", "success")
     } catch (error) {
-      console.error("Failed to save template:", error)
+      showError(error, () => void handleConfirmSave())
     }
   }
 
@@ -248,8 +251,9 @@ export function TemplateTool() {
       await customTemplatesQuery.refetch()
       setDeleteDialogOpen(false)
       setTemplateToDelete(null)
+      showToast("Template deleted successfully", "success")
     } catch (error) {
-      console.error("Failed to delete template:", error)
+      showError(error, () => void handleConfirmDelete())
     }
   }
 
@@ -438,7 +442,7 @@ export function TemplateTool() {
               Cancel
             </Button>
             <Button
-              onClick={handleConfirmSave}
+              onClick={() => void handleConfirmSave()}
               disabled={
                 createMutation.isPending ||
                 !templateName.trim() ||
@@ -469,7 +473,7 @@ export function TemplateTool() {
             </Button>
             <Button
               variant="destructive"
-              onClick={handleConfirmDelete}
+              onClick={() => void handleConfirmDelete()}
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete"}

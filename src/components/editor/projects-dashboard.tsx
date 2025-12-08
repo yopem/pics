@@ -35,6 +35,7 @@ import {
   StorageCardSkeleton,
 } from "@/components/ui/skeleton"
 import { useTRPC } from "@/lib/trpc/client"
+import { useToast } from "@/lib/utils/toast"
 
 export function ProjectsDashboard() {
   const router = useRouter()
@@ -42,6 +43,7 @@ export function ProjectsDashboard() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null)
 
+  const { showToast, showError } = useToast()
   const trpc = useTRPC()
   const projectsQuery = useQuery(trpc.projects.list.queryOptions())
   const storageQuery = useQuery(trpc.projects.getStorageQuota.queryOptions())
@@ -82,8 +84,9 @@ export function ProjectsDashboard() {
       await projectsQuery.refetch()
       setDeleteDialogOpen(false)
       setProjectToDelete(null)
+      showToast("Project deleted successfully", "success")
     } catch (error) {
-      console.error("Failed to delete project:", error)
+      showError(error, () => void handleConfirmDelete())
     }
   }
 
@@ -273,7 +276,7 @@ export function ProjectsDashboard() {
             </Button>
             <Button
               variant="destructive"
-              onClick={handleConfirmDelete}
+              onClick={() => void handleConfirmDelete()}
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete"}

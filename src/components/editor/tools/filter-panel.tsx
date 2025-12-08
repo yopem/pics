@@ -18,14 +18,25 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { filters as fabricFilters, FabricImage } from "fabric"
-import { Eye, EyeOff, GripVertical, X } from "lucide-react"
+import { Eye, EyeOff, GripVertical, Save, Trash2, X } from "lucide-react"
 
 import { useEditor } from "@/components/editor/editor-context"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
 import { Toggle } from "@/components/ui/toggle"
+import { useTRPC } from "@/lib/trpc/client"
+import { useToast } from "@/lib/utils/toast"
 
 interface FilterValues {
   brightness: number
@@ -173,6 +184,22 @@ export function FilterPanel() {
     null,
   )
   const [filterOrder, setFilterOrder] = useState<(keyof FilterValues)[]>([])
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [presetName, setPresetName] = useState("")
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [presetToDelete, setPresetToDelete] = useState<string | null>(null)
+
+  const { showToast, showError } = useToast()
+  const trpc = useTRPC()
+  const customPresetsQuery = useQuery(trpc.filterPresets.list.queryOptions())
+  const createMutation = useMutation(
+    trpc.filterPresets.create.mutationOptions(),
+  )
+  const deleteMutation = useMutation(
+    trpc.filterPresets.delete.mutationOptions(),
+  )
+
+  const customPresets = customPresetsQuery.data ?? []
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -200,7 +227,6 @@ export function FilterPanel() {
     const activeObject = canvas.getActiveObject()
     if (!activeObject || !(activeObject instanceof FabricImage)) return
 
-    // Store original image data for before/after comparison
     if (!originalImageData) {
       const src = activeObject.getSrc()
       if (src && typeof src === "string") {
@@ -210,7 +236,6 @@ export function FilterPanel() {
 
     const filterArray = []
 
-    // Apply filters in the order specified by filterOrder, or default order
     const order =
       customOrder || filterOrder.length > 0
         ? filterOrder
@@ -282,6 +307,96 @@ export function FilterPanel() {
     applyFilters(preset.values)
   }
 
+  const handleCustomPreset = (preset: (typeof customPresets)[0]) => {
+    const filterValues: FilterValues = { ...DEFAULT_FILTERS }
+
+    for (const filter of preset.filters) {
+      if (filter.type === "brightness" && typeof filter.value === "number") {
+        filterValues.brightness = filter.value
+      } else if (
+        filter.type === "contrast" &&
+        typeof filter.value === "number"
+      ) {
+        filterValues.contrast = filter.value
+      } else if (
+        filter.type === "saturation" &&
+        typeof filter.value === "number"
+      ) {
+        filterValues.saturation = filter.value
+      } else if (filter.type === "blur" && typeof filter.value === "number") {
+        filterValues.blur = filter.value
+      } else if (filter.type === "hue" && typeof filter.value === "number") {
+        filterValues.hue = filter.value
+      } else if (
+        filter.type === "sharpen" &&
+        typeof filter.value === "number"
+      ) {
+        filterValues.sharpen = filter.value
+      }
+    }
+
+    setFilters(filterValues)
+    applyFilters(filterValues)
+  }
+
+  const handleSavePreset = () => {
+    setSaveDialogOpen(true)
+  }
+
+  const handleConfirmSave = async () => {
+    if (!canvas || !presetName.trim()) return
+
+    const hasActiveFilters = Object.values(filters).some((v) => v !== 0)
+    if (!hasActiveFilters) return
+
+    try {
+      const filterArray = Object.entries(filters)
+        .filter(([, value]) => value !== 0)
+        .map(([key, value]) => ({
+          type: key,
+          value,
+        }))
+
+      const thumbnail = canvas.toDataURL({
+        format: "png",
+        quality: 0.8,
+        multiplier: 0.2,
+      })
+
+      await createMutation.mutateAsync({
+        name: presetName.trim(),
+        filters: filterArray,
+        thumbnail,
+      })
+
+      await customPresetsQuery.refetch()
+      setSaveDialogOpen(false)
+      setPresetName("")
+      showToast("Filter preset saved successfully", "success")
+    } catch (error) {
+      showError(error, () => void handleConfirmSave())
+    }
+  }
+
+  const handleDeleteClick = (presetId: string) => {
+    setPresetToDelete(presetId)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!presetToDelete) return
+
+    try {
+      await deleteMutation.mutateAsync({ id: presetToDelete })
+      await customPresetsQuery.refetch()
+      setDeleteDialogOpen(false)
+      setPresetToDelete(null)
+      showToast("Filter preset deleted successfully", "success")
+    } catch (error) {
+      showError(error, () => void handleConfirmDelete())
+    }
+  }
+
   const handleReset = () => {
     setFilters(DEFAULT_FILTERS)
     applyFilters(DEFAULT_FILTERS)
@@ -292,7 +407,6 @@ export function FilterPanel() {
     const newFilters = { ...filters, [key]: 0 }
     setFilters(newFilters)
     applyFilters(newFilters)
-    // Update filter order
     setFilterOrder(filterOrder.filter((k) => k !== key))
   }
 
@@ -302,12 +416,10 @@ export function FilterPanel() {
     if (!activeObject || !(activeObject instanceof FabricImage)) return
 
     if (!showBeforeAfter) {
-      // Show original
       activeObject.filters = []
       activeObject.applyFilters()
       canvas.renderAll()
     } else {
-      // Show filtered
       applyFilters(filters)
     }
 
@@ -322,16 +434,28 @@ export function FilterPanel() {
       value,
     }))
 
-  // Update filter order when active filters change
   if (activeFilters.length > 0 && filterOrder.length === 0) {
     const keys = activeFilters.map((f) => f.key)
     setFilterOrder(keys)
   }
 
+  const hasActiveFilters = Object.values(filters).some((v) => v !== 0)
+
   return (
     <div className="flex h-full flex-col gap-4 p-4">
       <div>
-        <h3 className="mb-3 text-sm font-medium">Presets</h3>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-medium">Presets</h3>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSavePreset}
+            disabled={!hasActiveFilters}
+          >
+            <Save className="mr-1.5 h-3.5 w-3.5" />
+            Save
+          </Button>
+        </div>
         <div className="grid grid-cols-3 gap-2">
           {FILTER_PRESETS.map((preset) => (
             <Button
@@ -344,6 +468,33 @@ export function FilterPanel() {
             </Button>
           ))}
         </div>
+        {customPresets.length > 0 && (
+          <>
+            <h4 className="mt-3 mb-2 text-xs font-medium">My Presets</h4>
+            <div className="space-y-1.5">
+              {customPresets.map((preset) => (
+                <div key={preset.id} className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCustomPreset(preset)}
+                    className="flex-1 justify-start"
+                  >
+                    <span className="text-xs">{preset.name}</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDeleteClick(preset.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <Separator />
@@ -494,6 +645,68 @@ export function FilterPanel() {
       <Button variant="outline" onClick={handleReset}>
         Reset All
       </Button>
+
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Filter Preset</DialogTitle>
+            <DialogDescription>
+              Save your current filter settings as a preset for quick access
+              later.
+            </DialogDescription>
+          </DialogHeader>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">
+              Preset Name
+            </label>
+            <input
+              type="text"
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              placeholder="e.g., My Vintage Look"
+              className="border-input bg-background placeholder:text-muted-foreground focus:ring-primary h-9 w-full rounded-md border px-3 text-sm focus:ring-2 focus:outline-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => void handleConfirmSave()}
+              disabled={createMutation.isPending || !presetName.trim()}
+            >
+              {createMutation.isPending ? "Saving..." : "Save Preset"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Preset</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this preset? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void handleConfirmDelete()}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
