@@ -47,6 +47,7 @@
     "drizzle-zod": "^0.8.3",
     "fabric": "^6.9.0",
     "js.foresight": "^3.3.3",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.556.0",
     "nanoid": "^5.1.6",
     "next": "16.0.7",
