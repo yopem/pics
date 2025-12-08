@@ -17,6 +17,7 @@ import {
 } from "lucide-react"
 
 import { useEditor } from "@/components/editor/editor-context"
+import ThemeSwitcher from "@/components/theme/theme-switcher"
 import { Button } from "@/components/ui/button"
 import {
   Popover,
@@ -300,6 +301,7 @@ export function MainToolbar() {
         role="group"
         aria-label="File actions"
       >
+        <ThemeSwitcher />
         <Suspense fallback={null}>
           <KeyboardShortcutsDialog />
         </Suspense>
