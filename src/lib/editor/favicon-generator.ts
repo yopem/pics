@@ -104,6 +104,29 @@ export function canvasToOptimizedSvg(canvas: HTMLCanvasElement): string {
   return optimizeSvg(svg)
 }
 
+/**
+ * Optimize SVG markup by:
+ * - Removing unnecessary whitespace
+ * - Minifying attributes
+ * - Removing comments
+ * - Rounding decimal precision
+ */
 function optimizeSvg(svg: string): string {
-  return svg.replace(/\s+/g, " ").replace(/>\s+</g, "><").trim()
+  return (
+    svg
+      // Remove XML comments
+      .replace(/<!--[\s\S]*?-->/g, "")
+      // Remove unnecessary whitespace between tags
+      .replace(/>\s+</g, "><")
+      // Collapse multiple spaces to single space
+      .replace(/\s+/g, " ")
+      // Round decimal values to 2 places for smaller file size
+      .replace(/(\d+\.\d{3,})/g, (match) => {
+        return parseFloat(match).toFixed(2)
+      })
+      // Remove spaces around equal signs in attributes
+      .replace(/\s*=\s*/g, "=")
+      // Trim leading/trailing whitespace
+      .trim()
+  )
 }
