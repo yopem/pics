@@ -80,11 +80,10 @@ export function EditorProvider({
 
   const trpc = useTRPC()
 
-  const isTemporaryProject = projectId.startsWith("temp-")
-
   const { data: projectData, isLoading: isLoadingProject } = useQuery({
     ...trpc.projects.get.queryOptions({ id: projectId }),
-    enabled: !isTemporaryProject,
+    retry: false,
+    refetchOnWindowFocus: false,
   })
 
   const saveVersionMutation = useMutation(
@@ -341,7 +340,7 @@ export function EditorProvider({
   }, [projectData, canvas])
 
   useEffect(() => {
-    if (isTemporaryProject || !projectId) return
+    if (!projectId) return
 
     let lockRefreshInterval: NodeJS.Timeout | undefined
 
@@ -377,7 +376,6 @@ export function EditorProvider({
     }
   }, [
     projectId,
-    isTemporaryProject,
     claimEditLockMutation,
     refreshEditLockMutation,
     releaseEditLockMutation,

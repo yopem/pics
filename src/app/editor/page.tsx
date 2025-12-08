@@ -47,6 +47,13 @@ export default function EditorPage() {
   const { data: projects, isLoading } = useQuery(
     trpc.projects.list.queryOptions(),
   )
+  const createProject = useMutation({
+    ...trpc.projects.create.mutationOptions(),
+    onSuccess: (project) => {
+      void queryClient.invalidateQueries({ queryKey: ["projects", "list"] })
+      router.push(`/editor/${project.id}`)
+    },
+  })
   const deleteProject = useMutation({
     ...trpc.projects.delete.mutationOptions(),
     onSuccess: () => {
@@ -66,8 +73,10 @@ export default function EditorPage() {
   })
 
   const handleCreateNew = () => {
-    const projectId = `temp-${Date.now()}`
-    router.push(`/editor/${projectId}`)
+    createProject.mutate({
+      name: `Untitled Project ${new Date().toLocaleDateString()}`,
+      status: "draft",
+    })
   }
 
   const handleOpenProject = (projectId: string) => {

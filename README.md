@@ -11,23 +11,36 @@ generation.
 - **Canvas Editor**: Interactive canvas with Fabric.js for precise image
   manipulation
 - **Filters**: Apply brightness, contrast, saturation, blur, sharpen, and hue
-  adjustments
+  adjustments with custom filter presets
 - **Crop Tool**: Interactive cropping with preset aspect ratios and social media
   dimensions
 - **Background Removal**: AI-powered background removal using
   @imgly/background-removal-node
-- **Text Tool**: Add and customize text overlays
-- **History**: Full undo/redo support with 50-state history
+- **Background Replacement**: Replace backgrounds with solid colors, gradients,
+  or custom images
+- **Text Tool**: Add and customize text overlays with multiple fonts and colors
+- **Transform Tools**: Rotate images (90°, 180°, 270°) and flip
+  horizontally/vertically
+- **History**: Full undo/redo support with 50-state history and visual timeline
+- **Drag & Drop**: Drag and drop images directly onto the canvas
 
 ### Advanced Features
 
 - **Social Media Templates**: Pre-configured templates for Instagram, Twitter/X,
-  Facebook, and LinkedIn
+  Facebook, and LinkedIn with custom template saving
 - **Favicon Generator**: Generate complete favicon packages with all required
-  sizes (ICO, PNG, WebP)
-- **Project Management**: Save, load, and manage multiple projects
-- **Export Options**: Export to PNG, JPEG, or WebP with quality control
-- **Real-time Collaboration**: Autosave functionality with version control
+  sizes (ICO, PNG, WebP, SVG) and web manifest
+- **Canvas Presets**: Quick resize to common dimensions (HD, 4K, Square, A4,
+  mobile, tablet sizes)
+- **Project Management**: Save, load, duplicate, rename, and manage multiple
+  projects
+- **Export Options**: Export to PNG, JPEG, or WebP with quality control and
+  batch export to multiple formats
+- **Custom Filter Presets**: Save and reuse your favorite filter combinations
+- **Color History**: Recently used colors are saved and easily accessible in all
+  color pickers
+- **Real-time Collaboration**: Autosave functionality with version control and
+  edit locking
 
 ### UI/UX
 
@@ -121,6 +134,13 @@ bun run dev
 - `Ctrl/Cmd + Z` - Undo
 - `Ctrl/Cmd + Y` or `Ctrl/Cmd + Shift + Z` - Redo
 - `Ctrl/Cmd + S` - Save project
+- `Ctrl/Cmd + [` - Rotate left 90°
+- `Ctrl/Cmd + ]` - Rotate right 90°
+- `H` - Flip horizontal
+- `Shift + H` - Flip vertical
+- `Ctrl/Cmd + Alt + 1` - HD canvas (1920×1080)
+- `Ctrl/Cmd + Alt + 2` - 4K canvas (3840×2160)
+- `Ctrl/Cmd + Alt + 3` - Square canvas (1200×1200)
 - `Tab` - Toggle sidebars
 - `?` - Show keyboard shortcuts help
 
@@ -128,10 +148,11 @@ bun run dev
 
 Access your projects at `/editor/projects`:
 
-- View all saved projects
+- View all saved projects with thumbnails
 - Search and filter projects
-- Open, rename, or delete projects
-- Monitor storage usage
+- Open, rename, duplicate, or delete projects
+- Monitor storage usage with quota visualization
+- Quick actions for each project
 
 ## Architecture
 
@@ -200,10 +221,12 @@ src/components/
 ## Performance Considerations
 
 - Canvas rendering optimized with object caching
-- History limited to 50 states
-- Auto-save debounced to 30 seconds
+- History limited to 50 states with visual timeline
+- Auto-save debounced to 30 seconds with loading indicators
 - Large images automatically downscaled before background removal (max 2048px)
 - Lazy loading of Fabric.js library
+- Color picker history stored locally (last 12 colors)
+- Batch export optimization for multiple format generation
 
 ## Deployment
 
