@@ -46,7 +46,7 @@ export const customTemplatesRouter = createTRPCRouter({
         .where(eq(customTemplatesTable.id, input.id))
         .returning()
 
-      if (!deleted || deleted.userId !== ctx.session.id) {
+      if (deleted.userId !== ctx.session.id) {
         throw new Error("Template not found or unauthorized")
       }
 
