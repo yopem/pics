@@ -13,6 +13,7 @@ export function EditorCanvas() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { canvas, setCanvas, addToHistory, isLoadingProject } = useEditor()
   const [isFabricLoading, setIsFabricLoading] = useState(true)
+  const [isDragging, setIsDragging] = useState(false)
   const fabricRef = useRef<{
     Canvas: typeof FabricCanvas
     Image: typeof FabricImage
@@ -79,9 +80,8 @@ export function EditorCanvas() {
     }
   }, [setCanvas, addToHistory, isFabricLoading])
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !canvas || !fabricRef.current) return
+  const loadImageFile = (file: File) => {
+    if (!canvas || !fabricRef.current) return
 
     const { Image: FabricImage } = fabricRef.current
     const reader = new FileReader()
@@ -126,10 +126,47 @@ export function EditorCanvas() {
       }
     }
     reader.readAsDataURL(file)
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    loadImageFile(file)
 
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+
+    const files = e.dataTransfer.files
+    if (files.length === 0) return
+
+    const file = files[0]
+
+    if (!file.type.startsWith("image/")) {
+      console.error("Invalid file type. Please upload an image.")
+      return
+    }
+
+    loadImageFile(file)
   }
 
   const hasObjects = canvas && canvas.getObjects().length > 0
@@ -139,7 +176,21 @@ export function EditorCanvas() {
       className="bg-muted/20 relative flex flex-1 items-center justify-center p-4"
       role="main"
       aria-label="Image editing canvas"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
+      {isDragging && (
+        <div className="border-primary bg-primary/10 absolute inset-0 z-50 flex items-center justify-center border-4 border-dashed backdrop-blur-sm">
+          <div className="text-center">
+            <Upload className="text-primary mx-auto mb-4 size-16" />
+            <p className="text-primary text-lg font-semibold">
+              Drop image here to upload
+            </p>
+          </div>
+        </div>
+      )}
+
       <canvas
         ref={canvasRef}
         className="border-border border shadow-lg"
@@ -177,7 +228,7 @@ export function EditorCanvas() {
               />
               <h3 className="mb-2 text-lg font-semibold">Upload an Image</h3>
               <p className="text-muted-foreground mb-4 text-sm">
-                Get started by uploading an image to edit
+                Drag and drop an image or click to choose a file
               </p>
               <Button
                 onClick={() => fileInputRef.current?.click()}

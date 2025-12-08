@@ -6,6 +6,7 @@ import { Upload } from "lucide-react"
 
 import { useEditor } from "@/components/editor/editor-context"
 import { Button } from "@/components/ui/button"
+import { ColorPicker } from "@/components/ui/color-picker"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
@@ -222,21 +223,15 @@ export function BackgroundReplacementTool() {
             <h4 className="mb-3 text-xs font-medium" id="custom-color-heading">
               Custom Color
             </h4>
-            <div
-              className="flex gap-2"
-              role="group"
-              aria-labelledby="custom-color-heading"
-            >
-              <input
-                type="color"
+            <div className="space-y-3">
+              <ColorPicker
                 value={customColor}
-                onChange={(e) => setCustomColor(e.target.value)}
-                className="border-border h-10 w-20 cursor-pointer rounded-md border-2"
-                aria-label="Choose custom background color"
+                onChange={setCustomColor}
+                label="Pick Color"
               />
               <Button
                 variant="outline"
-                className="flex-1"
+                className="w-full"
                 onClick={() => handleSolidColor(customColor)}
                 aria-label="Apply selected custom color"
               >

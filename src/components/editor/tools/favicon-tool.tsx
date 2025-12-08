@@ -6,6 +6,7 @@ import JSZip from "jszip"
 
 import { useEditor } from "@/components/editor/editor-context"
 import { Button } from "@/components/ui/button"
+import { ColorPicker } from "@/components/ui/color-picker"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Toggle } from "@/components/ui/toggle"
@@ -251,28 +252,16 @@ Generated with Yopem Pics Image Editor
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-muted-foreground mb-1 block text-xs">
-                    Theme Color
-                  </label>
-                  <input
-                    type="color"
-                    value={themeColor}
-                    onChange={(e) => setThemeColor(e.target.value)}
-                    className="h-8 w-full rounded-md border"
-                  />
-                </div>
-                <div>
-                  <label className="text-muted-foreground mb-1 block text-xs">
-                    Background Color
-                  </label>
-                  <input
-                    type="color"
-                    value={backgroundColor}
-                    onChange={(e) => setBackgroundColor(e.target.value)}
-                    className="h-8 w-full rounded-md border"
-                  />
-                </div>
+                <ColorPicker
+                  value={themeColor}
+                  onChange={setThemeColor}
+                  label="Theme Color"
+                />
+                <ColorPicker
+                  value={backgroundColor}
+                  onChange={setBackgroundColor}
+                  label="Background Color"
+                />
               </div>
             </div>
           </div>

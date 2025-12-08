@@ -2,7 +2,19 @@
 
 import { lazy, Suspense, useRef, useState } from "react"
 import { Image as FabricImage } from "fabric"
-import { Download, Maximize2, Redo2, Save, Undo2, Upload } from "lucide-react"
+import {
+  Download,
+  FlipHorizontal,
+  FlipVertical,
+  Loader2,
+  Maximize2,
+  Redo2,
+  RotateCcw,
+  RotateCw,
+  Save,
+  Undo2,
+  Upload,
+} from "lucide-react"
 
 import { useEditor } from "@/components/editor/editor-context"
 import { Button } from "@/components/ui/button"
@@ -39,6 +51,7 @@ export function MainToolbar() {
     historyIndex,
     history,
     addToHistory,
+    isSaving,
   } = useEditor()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
@@ -98,6 +111,37 @@ export function MainToolbar() {
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
+  }
+
+  const handleRotate = (degrees: number) => {
+    if (!canvas) return
+
+    const activeObject = canvas.getActiveObject()
+    if (!activeObject) return
+
+    const currentAngle = activeObject.angle || 0
+    activeObject.rotate(currentAngle + degrees)
+    canvas.renderAll()
+
+    const state = JSON.stringify(canvas.toJSON())
+    addToHistory(state)
+  }
+
+  const handleFlip = (direction: "horizontal" | "vertical") => {
+    if (!canvas) return
+
+    const activeObject = canvas.getActiveObject()
+    if (!activeObject) return
+
+    if (direction === "horizontal") {
+      activeObject.set("flipX", !activeObject.flipX)
+    } else {
+      activeObject.set("flipY", !activeObject.flipY)
+    }
+    canvas.renderAll()
+
+    const state = JSON.stringify(canvas.toJSON())
+    addToHistory(state)
   }
 
   return (
@@ -177,6 +221,49 @@ export function MainToolbar() {
         </PopoverContent>
       </Popover>
 
+      <div
+        className="flex items-center gap-1"
+        role="group"
+        aria-label="Transform actions"
+      >
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          onClick={() => handleRotate(-90)}
+          title="Rotate Left 90°"
+          aria-label="Rotate left 90 degrees"
+        >
+          <RotateCcw className="size-4" />
+        </Button>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          onClick={() => handleRotate(90)}
+          title="Rotate Right 90°"
+          aria-label="Rotate right 90 degrees"
+        >
+          <RotateCw className="size-4" />
+        </Button>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          onClick={() => handleFlip("horizontal")}
+          title="Flip Horizontal"
+          aria-label="Flip horizontal"
+        >
+          <FlipHorizontal className="size-4" />
+        </Button>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          onClick={() => handleFlip("vertical")}
+          title="Flip Vertical"
+          aria-label="Flip vertical"
+        >
+          <FlipVertical className="size-4" />
+        </Button>
+      </div>
+
       <Separator orientation="vertical" className="mx-2 h-6" />
 
       <div
@@ -220,10 +307,15 @@ export function MainToolbar() {
           size="sm"
           variant="outline"
           onClick={() => saveProject()}
+          disabled={isSaving}
           aria-label="Save project"
         >
-          <Save className="size-4" />
-          Save
+          {isSaving ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Save className="size-4" />
+          )}
+          {isSaving ? "Saving..." : "Save"}
         </Button>
         <Button size="sm" onClick={handleExport} aria-label="Export image">
           <Download className="size-4" />

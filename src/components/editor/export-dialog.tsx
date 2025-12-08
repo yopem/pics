@@ -38,6 +38,10 @@ export function ExportDialog({
   const [originalWidth, setOriginalWidth] = useState(0)
   const [originalHeight, setOriginalHeight] = useState(0)
   const [estimatedFileSize, setEstimatedFileSize] = useState<string>("")
+  const [batchExport, setBatchExport] = useState(false)
+  const [selectedFormats, setSelectedFormats] = useState<
+    ("png" | "jpg" | "webp")[]
+  >(["png"])
 
   const trpc = useTRPC()
   const exportMutation = useMutation(trpc.editor.exportImage.mutationOptions())
@@ -110,44 +114,55 @@ export function ExportDialog({
     if (!canvasDataUrl) return
 
     try {
-      let exportDataUrl = canvasDataUrl
+      const formatsToExport = batchExport ? selectedFormats : [format]
 
-      // Resize if dimensions changed
-      if (width !== originalWidth || height !== originalHeight) {
-        const img = new Image()
-        img.src = canvasDataUrl
-        await new Promise((resolve) => {
-          img.onload = resolve
+      for (const exportFormat of formatsToExport) {
+        let exportDataUrl = canvasDataUrl
+
+        // Resize if dimensions changed
+        if (width !== originalWidth || height !== originalHeight) {
+          const img = new Image()
+          img.src = canvasDataUrl
+          await new Promise((resolve) => {
+            img.onload = resolve
+          })
+
+          const canvas = document.createElement("canvas")
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext("2d")
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height)
+            exportDataUrl = canvas.toDataURL(
+              `image/${exportFormat}`,
+              quality / 100,
+            )
+          }
+        }
+
+        if (exportFormat === "jpg") {
+          const exifMetadata = getDefaultExifMetadata()
+          exportDataUrl = embedExifMetadata(exportDataUrl, exifMetadata)
+        }
+
+        const result = await exportMutation.mutateAsync({
+          projectId,
+          imageData: exportDataUrl,
+          format: exportFormat,
+          quality,
         })
 
-        const canvas = document.createElement("canvas")
-        canvas.width = width
-        canvas.height = height
-        const ctx = canvas.getContext("2d")
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height)
-          exportDataUrl = canvas.toDataURL(`image/${format}`, quality / 100)
+        const link = document.createElement("a")
+        link.href = result.dataUrl
+        link.download = `export-${Date.now()}.${exportFormat}`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        if (formatsToExport.length > 1) {
+          await new Promise((resolve) => setTimeout(resolve, 100))
         }
       }
-
-      if (format === "jpg") {
-        const exifMetadata = getDefaultExifMetadata()
-        exportDataUrl = embedExifMetadata(exportDataUrl, exifMetadata)
-      }
-
-      const result = await exportMutation.mutateAsync({
-        projectId,
-        imageData: exportDataUrl,
-        format,
-        quality,
-      })
-
-      const link = document.createElement("a")
-      link.href = result.dataUrl
-      link.download = `export-${Date.now()}.${format}`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
 
       onOpenChange(false)
     } catch (error) {
@@ -300,14 +315,79 @@ export function ExportDialog({
               </div>
             </TabsContent>
           </Tabs>
+
+          {/* Batch Export Section */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <input
+                id="batch-export"
+                type="checkbox"
+                checked={batchExport}
+                onChange={(e) => {
+                  setBatchExport(e.target.checked)
+                  if (e.target.checked && !selectedFormats.includes(format)) {
+                    setSelectedFormats([format])
+                  }
+                }}
+                className="border-input h-4 w-4 rounded"
+              />
+              <label
+                htmlFor="batch-export"
+                className="cursor-pointer text-sm font-medium"
+              >
+                Export in multiple formats
+              </label>
+            </div>
+            {batchExport && (
+              <div className="bg-muted/50 space-y-2 rounded-lg p-3">
+                <p className="text-muted-foreground text-xs">
+                  Select formats to export:
+                </p>
+                <div className="flex gap-3">
+                  {(["png", "jpg", "webp"] as const).map((fmt) => (
+                    <label
+                      key={fmt}
+                      className="flex cursor-pointer items-center gap-2"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedFormats.includes(fmt)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedFormats([...selectedFormats, fmt])
+                          } else {
+                            setSelectedFormats(
+                              selectedFormats.filter((f) => f !== fmt),
+                            )
+                          }
+                        }}
+                        className="border-input h-4 w-4 rounded"
+                      />
+                      <span className="text-sm">{fmt.toUpperCase()}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleExport} disabled={exportMutation.isPending}>
-            {exportMutation.isPending ? "Exporting..." : "Export"}
+          <Button
+            onClick={handleExport}
+            disabled={
+              exportMutation.isPending ||
+              (batchExport && selectedFormats.length === 0)
+            }
+          >
+            {exportMutation.isPending
+              ? "Exporting..."
+              : batchExport
+                ? `Export ${selectedFormats.length} Format${selectedFormats.length > 1 ? "s" : ""}`
+                : "Export"}
           </Button>
         </DialogFooter>
       </DialogContent>

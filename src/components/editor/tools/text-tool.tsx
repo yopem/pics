@@ -5,6 +5,7 @@ import { Textbox } from "fabric"
 
 import { useEditor } from "@/components/editor/editor-context"
 import { Button } from "@/components/ui/button"
+import { ColorPicker } from "@/components/ui/color-picker"
 import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
 
@@ -64,8 +65,7 @@ export function TextTool() {
     }
   }
 
-  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const color = e.target.value
+  const handleColorChange = (color: string) => {
     setTextColor(color)
 
     if (!canvas) return
@@ -144,27 +144,12 @@ export function TextTool() {
 
       <Separator />
 
-      <div>
-        <label
-          htmlFor="text-color-picker"
-          className="mb-2 block text-xs font-medium"
-        >
-          Text Color
-        </label>
-        <div className="flex items-center gap-2">
-          <input
-            id="text-color-picker"
-            type="color"
-            value={textColor}
-            onChange={handleColorChange}
-            className="h-10 w-full cursor-pointer rounded border"
-            aria-label="Choose text color"
-          />
-          <span className="text-muted-foreground text-xs" aria-live="polite">
-            {textColor}
-          </span>
-        </div>
-      </div>
+      <ColorPicker
+        id="text-color-picker"
+        value={textColor}
+        onChange={handleColorChange}
+        label="Text Color"
+      />
     </div>
   )
 }

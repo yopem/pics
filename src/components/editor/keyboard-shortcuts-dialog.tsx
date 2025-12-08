@@ -51,6 +51,20 @@ const shortcuts: ShortcutItem[] = [
   { keys: ["Delete"], description: "Delete selected", category: "Editing" },
   { keys: ["Backspace"], description: "Delete selected", category: "Editing" },
 
+  // Transform
+  {
+    keys: ["Ctrl/Cmd", "["],
+    description: "Rotate left 90°",
+    category: "Transform",
+  },
+  {
+    keys: ["Ctrl/Cmd", "]"],
+    description: "Rotate right 90°",
+    category: "Transform",
+  },
+  { keys: ["H"], description: "Flip horizontal", category: "Transform" },
+  { keys: ["Shift", "H"], description: "Flip vertical", category: "Transform" },
+
   // View
   { keys: ["Tab"], description: "Toggle sidebars", category: "View" },
   { keys: ["Ctrl/Cmd", "0"], description: "Fit to screen", category: "View" },

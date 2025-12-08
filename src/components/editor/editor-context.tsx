@@ -35,6 +35,7 @@ interface EditorContextValue {
   projectId: string
   currentProject: SelectProject | null
   isLoadingProject: boolean
+  isSaving: boolean
   activeTool: ActiveTool
   setActiveTool: (tool: ActiveTool) => void
   history: HistoryEntry[]
@@ -229,6 +230,26 @@ export function EditorProvider({
         } else if (e.key === "s") {
           e.preventDefault()
           void saveProject()
+        } else if (e.key === "[" && canvas) {
+          e.preventDefault()
+          const activeObject = canvas.getActiveObject()
+          if (activeObject) {
+            const currentAngle = activeObject.angle || 0
+            activeObject.rotate(currentAngle - 90)
+            canvas.renderAll()
+            const state = JSON.stringify(canvas.toJSON())
+            addToHistory(state)
+          }
+        } else if (e.key === "]" && canvas) {
+          e.preventDefault()
+          const activeObject = canvas.getActiveObject()
+          if (activeObject) {
+            const currentAngle = activeObject.angle || 0
+            activeObject.rotate(currentAngle + 90)
+            canvas.renderAll()
+            const state = JSON.stringify(canvas.toJSON())
+            addToHistory(state)
+          }
         } else if (e.altKey && canvas) {
           if (e.key === "1") {
             e.preventDefault()
@@ -254,6 +275,28 @@ export function EditorProvider({
         e.preventDefault()
         toggleLeftSidebar()
         toggleRightSidebar()
+      } else if (e.key === "h" && canvas) {
+        e.preventDefault()
+        const activeObject = canvas.getActiveObject()
+        if (activeObject) {
+          if (e.shiftKey) {
+            activeObject.set("flipY", !activeObject.flipY)
+          } else {
+            activeObject.set("flipX", !activeObject.flipX)
+          }
+          canvas.renderAll()
+          const state = JSON.stringify(canvas.toJSON())
+          addToHistory(state)
+        }
+      } else if (e.key === "H" && canvas) {
+        e.preventDefault()
+        const activeObject = canvas.getActiveObject()
+        if (activeObject) {
+          activeObject.set("flipY", !activeObject.flipY)
+          canvas.renderAll()
+          const state = JSON.stringify(canvas.toJSON())
+          addToHistory(state)
+        }
       }
     }
 
@@ -346,6 +389,7 @@ export function EditorProvider({
     projectId,
     currentProject,
     isLoadingProject,
+    isSaving: saveVersionMutation.isPending,
     activeTool,
     setActiveTool,
     history,
