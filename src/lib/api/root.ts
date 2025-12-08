@@ -3,6 +3,7 @@ import {
   createTRPCRouter,
   publicProcedure,
 } from "@/lib/api/trpc"
+import { customTemplatesRouter } from "./routers/custom-templates"
 import { editorRouter } from "./routers/editor"
 import { postRouter } from "./routers/post"
 import { projectsRouter } from "./routers/projects"
@@ -13,6 +14,7 @@ export const appRouter = createTRPCRouter({
   post: postRouter,
   projects: projectsRouter,
   editor: editorRouter,
+  customTemplates: customTemplatesRouter,
 })
 
 export type AppRouter = typeof appRouter
