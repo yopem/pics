@@ -15,6 +15,11 @@ const BackgroundRemovalTool = lazy(() =>
     default: mod.BackgroundRemovalTool,
   })),
 )
+const CanvasResizeTool = lazy(() =>
+  import("@/components/editor/tools/canvas-resize-tool").then((mod) => ({
+    default: mod.CanvasResizeTool,
+  })),
+)
 const CropTool = lazy(() =>
   import("@/components/editor/tools/crop-tool").then((mod) => ({
     default: mod.CropTool,
@@ -97,6 +102,7 @@ export function PropertiesPanel() {
             {activeTool === "text" && <TextTool />}
             {activeTool === "template" && <TemplateTool />}
             {activeTool === "favicon" && <FaviconTool />}
+            {activeTool === "resize" && <CanvasResizeTool />}
             {activeTool === "select" && (
               <div className="text-muted-foreground text-sm">
                 Select a tool to see its options

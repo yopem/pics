@@ -6,6 +6,7 @@ import {
   Image,
   Image as ImageIcon,
   Layout,
+  Maximize2,
   Type,
 } from "lucide-react"
 
@@ -23,6 +24,7 @@ export function ToolsSidebar() {
     { id: "text" as const, icon: Type, label: "Text" },
     { id: "template" as const, icon: Layout, label: "Templates" },
     { id: "favicon" as const, icon: Image, label: "Favicon" },
+    { id: "resize" as const, icon: Maximize2, label: "Resize" },
   ]
 
   return (

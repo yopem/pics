@@ -23,6 +23,7 @@ type ActiveTool =
   | "text"
   | "template"
   | "favicon"
+  | "resize"
 
 interface HistoryEntry {
   canvasState: string
