@@ -1,9 +1,11 @@
 "use client"
 
+import { WifiOff } from "lucide-react"
+
 import { useEditor } from "@/components/editor/editor-context"
 
 export function StatusBar() {
-  const { canvas, isDirty } = useEditor()
+  const { canvas, isDirty, isOffline } = useEditor()
 
   const zoom = canvas ? Math.round(canvas.getZoom() * 100) : 100
 
@@ -21,6 +23,16 @@ export function StatusBar() {
             aria-label="Unsaved changes indicator"
           >
             ● Unsaved changes
+          </span>
+        )}
+        {isOffline && (
+          <span
+            className="text-destructive flex items-center gap-1.5"
+            aria-label="Offline mode warning"
+            role="alert"
+          >
+            <WifiOff className="h-3.5 w-3.5" aria-hidden="true" />
+            Offline
           </span>
         )}
       </div>

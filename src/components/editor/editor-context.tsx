@@ -13,6 +13,7 @@ import type { Canvas } from "fabric"
 
 import type { SelectProject } from "@/lib/db/schema"
 import { useTRPC } from "@/lib/trpc/client"
+import { setupOfflineDetection } from "@/lib/utils/network"
 
 type ActiveTool =
   | "select"
@@ -49,6 +50,7 @@ interface EditorContextValue {
   showRightSidebar: boolean
   toggleLeftSidebar: () => void
   toggleRightSidebar: () => void
+  isOffline: boolean
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null)
@@ -72,6 +74,7 @@ export function EditorProvider({
   const [isDirty, setIsDirty] = useState(false)
   const [showLeftSidebar, setShowLeftSidebar] = useState(true)
   const [showRightSidebar, setShowRightSidebar] = useState(true)
+  const [isOffline, setIsOffline] = useState(false)
   const autoSaveTimeout = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const trpc = useTRPC()
@@ -176,6 +179,15 @@ export function EditorProvider({
   }, [])
 
   useEffect(() => {
+    const cleanup = setupOfflineDetection(
+      () => setIsOffline(true),
+      () => setIsOffline(false),
+    )
+    setIsOffline(!navigator.onLine)
+    return cleanup
+  }, [])
+
+  useEffect(() => {
     if (isDirty) {
       if (autoSaveTimeout.current) {
         clearTimeout(autoSaveTimeout.current)
@@ -266,6 +278,7 @@ export function EditorProvider({
     showRightSidebar,
     toggleLeftSidebar,
     toggleRightSidebar,
+    isOffline,
   }
 
   return (

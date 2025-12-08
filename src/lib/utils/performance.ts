@@ -144,3 +144,81 @@ export function getRecommendedCanvasDimensions(): {
     default: limited ? 1024 : 2048,
   }
 }
+
+/**
+ * Check if image should be downscaled for performance
+ */
+export function shouldDownscaleImage(width: number, height: number): boolean {
+  const { max } = getRecommendedCanvasDimensions()
+  return width > max || height > max
+}
+
+/**
+ * Downscale image to target dimensions while maintaining quality
+ */
+export async function downscaleImage(
+  imageUrl: string,
+  targetMaxDimension?: number,
+): Promise<string> {
+  const maxDimension =
+    targetMaxDimension ?? getRecommendedCanvasDimensions().max
+
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+
+    img.onload = () => {
+      const { width, height } = img
+
+      if (width <= maxDimension && height <= maxDimension) {
+        resolve(imageUrl)
+        return
+      }
+
+      const scale = Math.min(maxDimension / width, maxDimension / height)
+
+      const newWidth = Math.floor(width * scale)
+      const newHeight = Math.floor(height * scale)
+
+      const canvas = document.createElement("canvas")
+      canvas.width = newWidth
+      canvas.height = newHeight
+
+      const ctx = canvas.getContext("2d")
+      if (!ctx) {
+        reject(new Error("Failed to get canvas context"))
+        return
+      }
+
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = "high"
+
+      ctx.drawImage(img, 0, 0, newWidth, newHeight)
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error("Failed to create blob"))
+            return
+          }
+
+          const reader = new FileReader()
+          reader.onload = () => {
+            resolve(reader.result as string)
+          }
+          reader.onerror = () => {
+            reject(new Error("Failed to read blob"))
+          }
+          reader.readAsDataURL(blob)
+        },
+        "image/png",
+        0.95,
+      )
+    }
+
+    img.onerror = () => {
+      reject(new Error("Failed to load image"))
+    }
+
+    img.src = imageUrl
+  })
+}

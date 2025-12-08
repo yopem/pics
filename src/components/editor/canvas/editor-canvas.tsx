@@ -6,6 +6,7 @@ import { Upload } from "lucide-react"
 
 import { useEditor } from "@/components/editor/editor-context"
 import { Button } from "@/components/ui/button"
+import { downscaleImage, shouldDownscaleImage } from "@/lib/utils/performance"
 
 export function EditorCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -85,24 +86,44 @@ export function EditorCanvas() {
     const { Image: FabricImage } = fabricRef.current
     const reader = new FileReader()
     reader.onload = async (event) => {
-      const imgUrl = event.target?.result as string
-      const img = await FabricImage.fromURL(imgUrl)
+      try {
+        let imgUrl = event.target?.result as string
 
-      const maxWidth = canvas.width || 800
-      const maxHeight = canvas.height || 600
+        const tempImg = new Image()
+        await new Promise((resolve, reject) => {
+          tempImg.onload = resolve
+          tempImg.onerror = reject
+          tempImg.src = imgUrl
+        })
 
-      if (img.width && img.height) {
-        const scale = Math.min(maxWidth / img.width, maxHeight / img.height, 1)
-        img.scale(scale)
+        if (shouldDownscaleImage(tempImg.width, tempImg.height)) {
+          imgUrl = await downscaleImage(imgUrl)
+        }
+
+        const img = await FabricImage.fromURL(imgUrl)
+
+        const maxWidth = canvas.width || 800
+        const maxHeight = canvas.height || 600
+
+        if (img.width && img.height) {
+          const scale = Math.min(
+            maxWidth / img.width,
+            maxHeight / img.height,
+            1,
+          )
+          img.scale(scale)
+        }
+
+        canvas.add(img)
+        canvas.centerObject(img)
+        canvas.setActiveObject(img)
+        canvas.renderAll()
+
+        const state = JSON.stringify(canvas.toJSON())
+        addToHistory(state)
+      } catch (error) {
+        console.error("Failed to load image:", error)
       }
-
-      canvas.add(img)
-      canvas.centerObject(img)
-      canvas.setActiveObject(img)
-      canvas.renderAll()
-
-      const state = JSON.stringify(canvas.toJSON())
-      addToHistory(state)
     }
     reader.readAsDataURL(file)
 

@@ -15,6 +15,7 @@ import {
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTRPC } from "@/lib/trpc/client"
+import { embedExifMetadata, getDefaultExifMetadata } from "@/lib/utils/exif"
 
 interface ExportDialogProps {
   open: boolean
@@ -127,6 +128,11 @@ export function ExportDialog({
           ctx.drawImage(img, 0, 0, width, height)
           exportDataUrl = canvas.toDataURL(`image/${format}`, quality / 100)
         }
+      }
+
+      if (format === "jpg") {
+        const exifMetadata = getDefaultExifMetadata()
+        exportDataUrl = embedExifMetadata(exportDataUrl, exifMetadata)
       }
 
       const result = await exportMutation.mutateAsync({

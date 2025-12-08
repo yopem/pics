@@ -30,6 +30,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  ProjectCardSkeleton,
+  StorageCardSkeleton,
+} from "@/components/ui/skeleton"
 import { useTRPC } from "@/lib/trpc/client"
 
 export function ProjectsDashboard() {
@@ -135,6 +139,8 @@ export function ProjectsDashboard() {
         </Card>
       )}
 
+      {storageQuery.isLoading && <StorageCardSkeleton />}
+
       <div className="mb-6 flex items-center gap-4">
         <div className="relative flex-1">
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
@@ -150,8 +156,10 @@ export function ProjectsDashboard() {
 
       <ScrollArea className="h-[calc(100vh-280px)]">
         {projectsQuery.isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-muted-foreground">Loading projects...</div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <ProjectCardSkeleton key={i} />
+            ))}
           </div>
         ) : filteredProjects.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
