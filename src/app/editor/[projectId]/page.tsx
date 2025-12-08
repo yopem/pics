@@ -1,6 +1,6 @@
 "use client"
 
-import { use } from "react"
+import { use, useEffect } from "react"
 
 import { EditorCanvas } from "@/components/editor/canvas/editor-canvas"
 import { EditorProvider, useEditor } from "@/components/editor/editor-context"
@@ -9,9 +9,14 @@ import { PropertiesPanel } from "@/components/editor/panels/properties-panel"
 import { StatusBar } from "@/components/editor/panels/status-bar"
 import { ToolsSidebar } from "@/components/editor/panels/tools-sidebar"
 import { MainToolbar } from "@/components/editor/toolbar/main-toolbar"
+import { trackPageView } from "@/lib/utils/analytics"
 
 function EditorLayout() {
   const { showLeftSidebar, showRightSidebar } = useEditor()
+
+  useEffect(() => {
+    trackPageView("/editor/project", "Editor - Project")
+  }, [])
 
   return (
     <>

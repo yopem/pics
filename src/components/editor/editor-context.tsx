@@ -90,6 +90,18 @@ export function EditorProvider({
     trpc.projects.saveVersion.mutationOptions(),
   )
 
+  const claimEditLockMutation = useMutation(
+    trpc.projects.claimEditLock.mutationOptions(),
+  )
+
+  const releaseEditLockMutation = useMutation(
+    trpc.projects.releaseEditLock.mutationOptions(),
+  )
+
+  const refreshEditLockMutation = useMutation(
+    trpc.projects.refreshEditLock.mutationOptions(),
+  )
+
   const addToHistory = useCallback(
     (state: string) => {
       setHistory((prev) => {
@@ -256,6 +268,49 @@ export function EditorProvider({
       }
     }
   }, [projectData, canvas])
+
+  useEffect(() => {
+    if (isTemporaryProject || !projectId) return
+
+    let lockRefreshInterval: NodeJS.Timeout | undefined
+
+    const claimLock = async () => {
+      try {
+        await claimEditLockMutation.mutateAsync({ projectId })
+
+        lockRefreshInterval = setInterval(
+          () => {
+            void refreshEditLockMutation
+              .mutateAsync({ projectId })
+              .catch((error) =>
+                console.error("Failed to refresh edit lock:", error),
+              )
+          },
+          2 * 60 * 1000,
+        )
+      } catch (error) {
+        console.error("Failed to claim edit lock:", error)
+      }
+    }
+
+    void claimLock()
+
+    return () => {
+      if (lockRefreshInterval) {
+        clearInterval(lockRefreshInterval)
+      }
+
+      void releaseEditLockMutation
+        .mutateAsync({ projectId })
+        .catch((error) => console.error("Failed to release edit lock:", error))
+    }
+  }, [
+    projectId,
+    isTemporaryProject,
+    claimEditLockMutation,
+    refreshEditLockMutation,
+    releaseEditLockMutation,
+  ])
 
   const value: EditorContextValue = {
     canvas,

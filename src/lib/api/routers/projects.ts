@@ -312,4 +312,148 @@ export const projectsRouter = createTRPCRouter({
         })
       }
     }),
+
+  claimEditLock: protectedProcedure
+    .input(z.object({ projectId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = await ctx.db.query.projectsTable.findFirst({
+          where: (project, { and, eq }) =>
+            and(
+              eq(project.id, input.projectId),
+              eq(project.userId, ctx.session.id),
+            ),
+        })
+
+        if (!project) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Project not found",
+          })
+        }
+
+        const now = new Date()
+        const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000)
+
+        if (
+          project.lastEditedBy &&
+          project.lastEditedBy !== ctx.session.id &&
+          project.lastEditedAt &&
+          project.lastEditedAt > fiveMinutesAgo
+        ) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message:
+              "Project is currently being edited by another user. Please try again later.",
+          })
+        }
+
+        await ctx.db
+          .update(projectsTable)
+          .set({
+            lastEditedBy: ctx.session.id,
+            lastEditedAt: now,
+          })
+          .where(eq(projectsTable.id, input.projectId))
+
+        return { success: true, lockedUntil: now }
+      } catch (error) {
+        if (error instanceof TRPCError) throw error
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to claim edit lock",
+        })
+      }
+    }),
+
+  releaseEditLock: protectedProcedure
+    .input(z.object({ projectId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = await ctx.db.query.projectsTable.findFirst({
+          where: (project, { and, eq }) =>
+            and(
+              eq(project.id, input.projectId),
+              eq(project.userId, ctx.session.id),
+            ),
+        })
+
+        if (!project) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Project not found",
+          })
+        }
+
+        if (project.lastEditedBy === ctx.session.id) {
+          await ctx.db
+            .update(projectsTable)
+            .set({
+              lastEditedBy: null,
+              lastEditedAt: null,
+            })
+            .where(eq(projectsTable.id, input.projectId))
+        }
+
+        return { success: true }
+      } catch (error) {
+        if (error instanceof TRPCError) throw error
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to release edit lock",
+        })
+      }
+    }),
+
+  refreshEditLock: protectedProcedure
+    .input(z.object({ projectId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = await ctx.db.query.projectsTable.findFirst({
+          where: (project, { and, eq }) =>
+            and(
+              eq(project.id, input.projectId),
+              eq(project.userId, ctx.session.id),
+            ),
+        })
+
+        if (!project) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Project not found",
+          })
+        }
+
+        if (project.lastEditedBy === ctx.session.id) {
+          await ctx.db
+            .update(projectsTable)
+            .set({
+              lastEditedAt: new Date(),
+            })
+            .where(eq(projectsTable.id, input.projectId))
+
+          return { success: true, extended: true }
+        }
+
+        return { success: true, extended: false }
+      } catch (error) {
+        if (error instanceof TRPCError) throw error
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to refresh edit lock",
+        })
+      }
+    }),
 })

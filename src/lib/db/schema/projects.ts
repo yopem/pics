@@ -16,6 +16,8 @@ export const projectsTable = pgTable("projects", {
   thumbnail: text(),
   originalImageUrl: text("original_image_url"),
   metadata: json().$type<{ width: number; height: number; format: string }>(),
+  lastEditedBy: text("last_edited_by"),
+  lastEditedAt: timestamp("last_edited_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
