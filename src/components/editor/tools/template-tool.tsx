@@ -161,7 +161,11 @@ export function TemplateTool() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4 p-4">
+    <div
+      className="flex h-full flex-col gap-4 p-4"
+      role="region"
+      aria-label="Template tool options"
+    >
       <div>
         <h3 className="mb-3 text-sm font-medium">Social Media Templates</h3>
         <p className="text-muted-foreground mb-4 text-xs">
@@ -170,18 +174,24 @@ export function TemplateTool() {
       </div>
 
       <div>
-        <h4 className="mb-2 text-xs font-medium">Fit Mode</h4>
+        <h4 className="mb-2 text-xs font-medium" id="fit-mode-heading">
+          Fit Mode
+        </h4>
         <Tabs
           value={fitMode}
           onValueChange={(value) => setFitMode(value as FitMode)}
         >
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList
+            className="grid w-full grid-cols-3"
+            role="tablist"
+            aria-labelledby="fit-mode-heading"
+          >
             <TabsTrigger value="fit">Fit</TabsTrigger>
             <TabsTrigger value="fill">Fill</TabsTrigger>
             <TabsTrigger value="crop">Crop</TabsTrigger>
           </TabsList>
         </Tabs>
-        <p className="text-muted-foreground mt-2 text-xs">
+        <p className="text-muted-foreground mt-2 text-xs" aria-live="polite">
           {fitMode === "fit" &&
             "Resize canvas to template size (preserves image)"}
           {fitMode === "fill" &&
@@ -200,15 +210,21 @@ export function TemplateTool() {
                 pressed={showSafeZone}
                 onPressedChange={toggleSafeZone}
                 size="sm"
+                aria-label={
+                  showSafeZone
+                    ? "Hide safe zone overlay"
+                    : "Show safe zone overlay"
+                }
+                aria-pressed={showSafeZone}
               >
                 {showSafeZone ? (
-                  <Eye className="h-3 w-3" />
+                  <Eye className="h-3 w-3" aria-hidden="true" />
                 ) : (
-                  <EyeOff className="h-3 w-3" />
+                  <EyeOff className="h-3 w-3" aria-hidden="true" />
                 )}
               </Toggle>
             </div>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-muted-foreground text-xs" aria-live="polite">
               {showSafeZone
                 ? "Safe zone is visible (green dashed border)"
                 : "Show the safe zone where content won't be cropped"}
