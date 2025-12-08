@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { FabricImage } from "fabric"
 import { Loader2 } from "lucide-react"
@@ -11,20 +11,41 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useTRPC } from "@/lib/trpc/client"
 
+type QualityLevel = "standard" | "high"
+
 export function BackgroundRemovalTool() {
   const { canvas, addToHistory } = useEditor()
   const [showProgress, setShowProgress] = useState(false)
   const [progressMessage, setProgressMessage] = useState("")
+  const [progressPercentage, setProgressPercentage] = useState(0)
+  const [quality, setQuality] = useState<QualityLevel>("standard")
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const trpc = useTRPC()
   const removeBackgroundMutation = useMutation(
     trpc.editor.removeBackground.mutationOptions(),
   )
+
+  useEffect(() => {
+    if (removeBackgroundMutation.isPending) {
+      const interval = setInterval(() => {
+        setProgressPercentage((prev) => {
+          if (prev >= 90) return prev
+          return prev + 5
+        })
+      }, 500)
+
+      return () => clearInterval(interval)
+    } else {
+      setProgressPercentage(0)
+    }
+  }, [removeBackgroundMutation.isPending])
 
   const handleRemoveBackground = async () => {
     if (!canvas) return
@@ -37,9 +58,12 @@ export function BackgroundRemovalTool() {
 
     setShowProgress(true)
     setProgressMessage("Preparing image...")
+    setProgressPercentage(10)
+    abortControllerRef.current = new AbortController()
 
     try {
       setProgressMessage("Removing background...")
+      setProgressPercentage(30)
       const dataUrl = activeObject.toDataURL({})
 
       const result = await removeBackgroundMutation.mutateAsync({
@@ -47,6 +71,7 @@ export function BackgroundRemovalTool() {
       })
 
       setProgressMessage("Applying changes...")
+      setProgressPercentage(90)
 
       const img = await FabricImage.fromURL(result.dataUrl)
 
@@ -67,9 +92,11 @@ export function BackgroundRemovalTool() {
       addToHistory(state)
 
       setProgressMessage("Complete!")
+      setProgressPercentage(100)
       setTimeout(() => {
         setShowProgress(false)
         setProgressMessage("")
+        setProgressPercentage(0)
       }, 500)
     } catch (error) {
       console.error("Failed to remove background:", error)
@@ -81,8 +108,19 @@ export function BackgroundRemovalTool() {
       setTimeout(() => {
         setShowProgress(false)
         setProgressMessage("")
+        setProgressPercentage(0)
       }, 2000)
     }
+  }
+
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    setShowProgress(false)
+    setProgressMessage("")
+    setProgressPercentage(0)
+    removeBackgroundMutation.reset()
   }
 
   const activeObject = canvas?.getActiveObject()
@@ -95,6 +133,35 @@ export function BackgroundRemovalTool() {
           <h3 className="mb-3 text-sm font-medium">Background Removal</h3>
           <p className="text-muted-foreground mb-4 text-xs">
             Remove the background from your image using AI
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-xs font-medium">
+            Quality Level
+          </label>
+          <div className="flex gap-2">
+            <Button
+              variant={quality === "standard" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setQuality("standard")}
+              className="flex-1"
+            >
+              Standard
+            </Button>
+            <Button
+              variant={quality === "high" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setQuality("high")}
+              className="flex-1"
+            >
+              High
+            </Button>
+          </div>
+          <p className="text-muted-foreground mt-2 text-xs">
+            {quality === "standard"
+              ? "Faster processing, good for most images"
+              : "Better quality, takes longer to process"}
           </p>
         </div>
 
@@ -137,8 +204,27 @@ export function BackgroundRemovalTool() {
           </DialogHeader>
           <div className="flex flex-col items-center justify-center gap-4 py-6">
             <Loader2 className="text-primary h-12 w-12 animate-spin" />
-            <p className="text-muted-foreground text-sm">{progressMessage}</p>
+            <div className="w-full px-4">
+              <div className="bg-muted mb-2 h-2 w-full overflow-hidden rounded-full">
+                <div
+                  className="bg-primary h-full transition-all duration-300"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+              <p className="text-muted-foreground text-center text-sm">
+                {progressMessage} ({progressPercentage}%)
+              </p>
+            </div>
           </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              disabled={!removeBackgroundMutation.isPending}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

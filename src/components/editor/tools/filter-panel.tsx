@@ -172,7 +172,7 @@ export function FilterPanel() {
   const [originalImageData, setOriginalImageData] = useState<string | null>(
     null,
   )
-  const [filterOrder, setFilterOrder] = useState<Array<keyof FilterValues>>([])
+  const [filterOrder, setFilterOrder] = useState<(keyof FilterValues)[]>([])
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -193,7 +193,7 @@ export function FilterPanel() {
 
   const applyFilters = (
     filterValues: FilterValues,
-    customOrder?: Array<keyof FilterValues>,
+    customOrder?: (keyof FilterValues)[],
   ) => {
     if (!canvas) return
 
@@ -214,7 +214,7 @@ export function FilterPanel() {
     const order =
       customOrder || filterOrder.length > 0
         ? filterOrder
-        : (Object.keys(filterValues) as Array<keyof FilterValues>)
+        : (Object.keys(filterValues) as (keyof FilterValues)[])
 
     for (const key of order) {
       const value = filterValues[key]
@@ -236,7 +236,7 @@ export function FilterPanel() {
         case "hue":
           filterArray.push(new fabricFilters.HueRotation({ rotation: value }))
           break
-        case "sharpen":
+        case "sharpen": {
           const matrix = [
             0,
             -1 * value,
@@ -250,6 +250,7 @@ export function FilterPanel() {
           ]
           filterArray.push(new fabricFilters.Convolute({ matrix }))
           break
+        }
       }
     }
 
