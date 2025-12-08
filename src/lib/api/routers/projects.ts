@@ -181,6 +181,62 @@ export const projectsRouter = createTRPCRouter({
       }
     }),
 
+  duplicate: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = await ctx.db.query.projectsTable.findFirst({
+          where: (project, { and, eq }) =>
+            and(eq(project.id, input.id), eq(project.userId, ctx.session.id)),
+        })
+
+        if (!project) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Project not found",
+          })
+        }
+
+        const versions = await ctx.db.query.projectVersionsTable.findMany({
+          where: (version, { eq }) => eq(version.projectId, input.id),
+          orderBy: (version, { desc }) => desc(version.versionNumber),
+        })
+
+        const [duplicatedProject] = await ctx.db
+          .insert(projectsTable)
+          .values({
+            userId: ctx.session.id,
+            name: `${project.name} (Copy)`,
+            status: project.status,
+            thumbnail: project.thumbnail,
+            originalImageUrl: project.originalImageUrl,
+            metadata: project.metadata,
+          })
+          .returning()
+
+        if (versions.length > 0) {
+          const latestVersion = versions[0]
+          await ctx.db.insert(projectVersionsTable).values({
+            projectId: duplicatedProject.id,
+            versionNumber: 1,
+            canvasState: latestVersion.canvasState,
+            editedImageUrl: latestVersion.editedImageUrl,
+            filters: latestVersion.filters,
+          })
+        }
+
+        return duplicatedProject
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to duplicate project",
+        })
+      }
+    }),
+
   getStorageQuota: protectedProcedure.query(async ({ ctx }) => {
     try {
       const projects = await ctx.db.query.projectsTable.findMany({

@@ -45,8 +45,15 @@ export function generateWebManifest(
   }
 }
 
-export function generateHTMLSnippet(appName: string): string {
-  return `<!-- Favicon -->
+export function generateHTMLSnippet(
+  appName: string,
+  includeSvg = false,
+): string {
+  const svgLink = includeSvg
+    ? '\n<link rel="icon" type="image/svg+xml" href="/favicon.svg">'
+    : ""
+
+  return `<!-- Favicon -->${svgLink}
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
@@ -83,4 +90,20 @@ export function downloadAsFile(
   link.click()
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
+}
+
+export function canvasToOptimizedSvg(canvas: HTMLCanvasElement): string {
+  const width = canvas.width
+  const height = canvas.height
+  const dataUrl = canvas.toDataURL("image/png")
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <image width="${width}" height="${height}" xlink:href="${dataUrl}"/>
+</svg>`
+
+  return optimizeSvg(svg)
+}
+
+function optimizeSvg(svg: string): string {
+  return svg.replace(/\s+/g, " ").replace(/>\s+</g, "><").trim()
 }

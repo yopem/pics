@@ -229,6 +229,26 @@ export function EditorProvider({
         } else if (e.key === "s") {
           e.preventDefault()
           void saveProject()
+        } else if (e.altKey && canvas) {
+          if (e.key === "1") {
+            e.preventDefault()
+            canvas.setDimensions({ width: 1920, height: 1080 })
+            canvas.renderAll()
+            const state = JSON.stringify(canvas.toJSON())
+            addToHistory(state)
+          } else if (e.key === "2") {
+            e.preventDefault()
+            canvas.setDimensions({ width: 3840, height: 2160 })
+            canvas.renderAll()
+            const state = JSON.stringify(canvas.toJSON())
+            addToHistory(state)
+          } else if (e.key === "3") {
+            e.preventDefault()
+            canvas.setDimensions({ width: 1200, height: 1200 })
+            canvas.renderAll()
+            const state = JSON.stringify(canvas.toJSON())
+            addToHistory(state)
+          }
         }
       } else if (e.key === "Tab") {
         e.preventDefault()
@@ -239,7 +259,15 @@ export function EditorProvider({
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [undo, redo, saveProject, toggleLeftSidebar, toggleRightSidebar])
+  }, [
+    undo,
+    redo,
+    saveProject,
+    toggleLeftSidebar,
+    toggleRightSidebar,
+    canvas,
+    addToHistory,
+  ])
 
   useEffect(() => {
     if (projectData && canvas) {

@@ -10,12 +10,14 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Toggle } from "@/components/ui/toggle"
 import {
+  canvasToOptimizedSvg,
   generateHTMLSnippet,
   generateWebManifest,
 } from "@/lib/editor/favicon-generator"
 import { useTRPC } from "@/lib/trpc/client"
 
 const FAVICON_SIZES = [
+  { name: "favicon.svg", size: null, format: "svg" as const },
   { name: "favicon.ico", size: 32, format: "ico" as const },
   { name: "favicon-16.png", size: 16, format: "png" as const },
   { name: "favicon-32.png", size: 32, format: "png" as const },
@@ -29,9 +31,9 @@ export function FaviconTool() {
   const [selectedSizes, setSelectedSizes] = useState<string[]>(
     FAVICON_SIZES.map((s) => s.name),
   )
-  const [generateFormat, setGenerateFormat] = useState<"all" | "png" | "ico">(
-    "all",
-  )
+  const [generateFormat, setGenerateFormat] = useState<
+    "all" | "png" | "ico" | "svg"
+  >("all")
   const [appName, setAppName] = useState("My App")
   const [shortName, setShortName] = useState("App")
   const [themeColor, setThemeColor] = useState("#ffffff")
@@ -85,10 +87,21 @@ export function FaviconTool() {
       // Create a ZIP file
       const zip = new JSZip()
 
+      // Add SVG favicon if selected
+      if (selectedSizes.includes("favicon.svg")) {
+        const fabricCanvas = canvas as unknown as {
+          getElement: () => HTMLCanvasElement
+        }
+        const canvasElement = fabricCanvas.getElement()
+        const svgContent = canvasToOptimizedSvg(canvasElement)
+        zip.file("favicon.svg", svgContent)
+      }
+
       // Add favicon files
       const faviconFiles = result.favicons.filter((favicon) => {
         if (generateFormat === "all")
           return selectedSizes.includes(favicon.name)
+        if (generateFormat === "svg") return false
         if (generateFormat === "png")
           return (
             selectedSizes.includes(favicon.name) &&
@@ -114,7 +127,10 @@ export function FaviconTool() {
       zip.file("manifest.json", JSON.stringify(manifest, null, 2))
 
       // Add HTML snippet
-      const htmlSnippet = generateHTMLSnippet(appName)
+      const htmlSnippet = generateHTMLSnippet(
+        appName,
+        selectedSizes.includes("favicon.svg"),
+      )
       zip.file("favicon-snippet.html", htmlSnippet)
 
       // Add README with instructions
@@ -275,6 +291,13 @@ Generated with Yopem Pics Image Editor
                 onClick={() => setGenerateFormat("all")}
               >
                 All
+              </Button>
+              <Button
+                variant={generateFormat === "svg" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setGenerateFormat("svg")}
+              >
+                SVG
               </Button>
               <Button
                 variant={generateFormat === "png" ? "default" : "outline"}

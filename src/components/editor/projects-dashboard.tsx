@@ -6,9 +6,11 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { format } from "date-fns"
 import {
   Clock,
+  Copy,
   FileImage,
   HardDrive,
   MoreVertical,
+  Pencil,
   Plus,
   Search,
   Trash2,
@@ -42,12 +44,18 @@ export function ProjectsDashboard() {
   const [searchQuery, setSearchQuery] = useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null)
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState("")
 
   const { showToast, showError } = useToast()
   const trpc = useTRPC()
   const projectsQuery = useQuery(trpc.projects.list.queryOptions())
   const storageQuery = useQuery(trpc.projects.getStorageQuota.queryOptions())
   const deleteMutation = useMutation(trpc.projects.delete.mutationOptions())
+  const duplicateMutation = useMutation(
+    trpc.projects.duplicate.mutationOptions(),
+  )
+  const updateMutation = useMutation(trpc.projects.update.mutationOptions())
 
   const projects = projectsQuery.data ?? []
   const storage = storageQuery.data
@@ -74,6 +82,47 @@ export function ProjectsDashboard() {
   const handleDeleteClick = (projectId: string) => {
     setProjectToDelete(projectId)
     setDeleteDialogOpen(true)
+  }
+
+  const handleDuplicateClick = async (projectId: string) => {
+    try {
+      const duplicated = await duplicateMutation.mutateAsync({ id: projectId })
+      await projectsQuery.refetch()
+      showToast("Project duplicated successfully", "success")
+      router.push(`/editor/${duplicated.id}`)
+    } catch (error) {
+      showError(error, () => void handleDuplicateClick(projectId))
+    }
+  }
+
+  const handleRenameClick = (projectId: string, currentName: string) => {
+    setEditingProjectId(projectId)
+    setEditingName(currentName)
+  }
+
+  const handleCancelRename = () => {
+    setEditingProjectId(null)
+    setEditingName("")
+  }
+
+  const handleSaveRename = async (projectId: string) => {
+    if (!editingName.trim() || editingName === editingProjectId) {
+      handleCancelRename()
+      return
+    }
+
+    try {
+      await updateMutation.mutateAsync({
+        id: projectId,
+        name: editingName.trim(),
+      })
+      await projectsQuery.refetch()
+      setEditingProjectId(null)
+      setEditingName("")
+      showToast("Project renamed successfully", "success")
+    } catch (error) {
+      showError(error, () => void handleSaveRename(projectId))
+    }
   }
 
   const handleConfirmDelete = async () => {
@@ -206,9 +255,29 @@ export function ProjectsDashboard() {
                     )}
                   </div>
                   <div className="p-4">
-                    <h3 className="mb-1 truncate font-semibold">
-                      {project.name}
-                    </h3>
+                    {editingProjectId === project.id ? (
+                      <div className="mb-1">
+                        <input
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              void handleSaveRename(project.id)
+                            } else if (e.key === "Escape") {
+                              handleCancelRename()
+                            }
+                          }}
+                          onBlur={() => void handleSaveRename(project.id)}
+                          className="border-input bg-background focus:ring-primary w-full rounded border px-2 py-1 text-sm font-semibold focus:ring-2 focus:outline-none"
+                          autoFocus
+                        />
+                      </div>
+                    ) : (
+                      <h3 className="mb-1 truncate font-semibold">
+                        {project.name}
+                      </h3>
+                    )}
                     <div className="text-muted-foreground flex items-center gap-2 text-xs">
                       <Clock className="h-3 w-3" />
                       <span>
@@ -237,6 +306,30 @@ export function ProjectsDashboard() {
                       <MoreVertical className="h-4 w-4" />
                     </PopoverTrigger>
                     <PopoverContent className="w-40 p-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleRenameClick(project.id, project.name)
+                        }}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Rename
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          void handleDuplicateClick(project.id)
+                        }}
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        Duplicate
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"

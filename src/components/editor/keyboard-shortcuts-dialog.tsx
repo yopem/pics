@@ -59,6 +59,28 @@ const shortcuts: ShortcutItem[] = [
   { keys: ["Ctrl/Cmd", "-"], description: "Zoom out", category: "View" },
   { keys: ["Space"], description: "Pan (hold and drag)", category: "View" },
 
+  // Canvas
+  {
+    keys: ["Ctrl/Cmd", "Shift", "R"],
+    description: "Resize canvas",
+    category: "Canvas",
+  },
+  {
+    keys: ["Ctrl/Cmd", "Alt", "1"],
+    description: "HD canvas (1920×1080)",
+    category: "Canvas",
+  },
+  {
+    keys: ["Ctrl/Cmd", "Alt", "2"],
+    description: "4K canvas (3840×2160)",
+    category: "Canvas",
+  },
+  {
+    keys: ["Ctrl/Cmd", "Alt", "3"],
+    description: "Square canvas (1200×1200)",
+    category: "Canvas",
+  },
+
   // Tools
   { keys: ["C"], description: "Crop tool", category: "Tools" },
   { keys: ["F"], description: "Filters tool", category: "Tools" },
