@@ -54,14 +54,7 @@ export function ExportDialog({
       estimateFileSize(canvasDataUrl, format, quality)
     }
     img.src = canvasDataUrl
-  }, [canvasDataUrl, open])
-
-  // Re-estimate file size when format or quality changes
-  useEffect(() => {
-    if (canvasDataUrl) {
-      estimateFileSize(canvasDataUrl, format, quality)
-    }
-  }, [format, quality, canvasDataUrl])
+  }, [canvasDataUrl, open, format, quality])
 
   const estimateFileSize = (dataUrl: string, fmt: string, qual: number) => {
     try {

@@ -23,9 +23,7 @@ export function HistoryPanel() {
   }
 
   const handleJumpToState = (index: number) => {
-    if (jumpToState) {
-      jumpToState(index)
-    }
+    jumpToState(index)
   }
 
   return (

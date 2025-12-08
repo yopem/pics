@@ -1,14 +1,23 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { lazy, Suspense, useRef, useState } from "react"
 import { Image as FabricImage } from "fabric"
 import { Download, Redo2, Save, Undo2, Upload } from "lucide-react"
 
 import { useEditor } from "@/components/editor/editor-context"
-import { ExportDialog } from "@/components/editor/export-dialog"
-import { KeyboardShortcutsDialog } from "@/components/editor/keyboard-shortcuts-dialog"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+
+const ExportDialog = lazy(() =>
+  import("@/components/editor/export-dialog").then((mod) => ({
+    default: mod.ExportDialog,
+  })),
+)
+const KeyboardShortcutsDialog = lazy(() =>
+  import("@/components/editor/keyboard-shortcuts-dialog").then((mod) => ({
+    default: mod.KeyboardShortcutsDialog,
+  })),
+)
 
 export function MainToolbar() {
   const {
@@ -119,7 +128,9 @@ export function MainToolbar() {
         role="group"
         aria-label="File actions"
       >
-        <KeyboardShortcutsDialog />
+        <Suspense fallback={null}>
+          <KeyboardShortcutsDialog />
+        </Suspense>
         <Button
           size="sm"
           variant="outline"
@@ -135,12 +146,14 @@ export function MainToolbar() {
         </Button>
       </div>
 
-      <ExportDialog
-        open={exportDialogOpen}
-        onOpenChange={setExportDialogOpen}
-        canvasDataUrl={canvas?.toDataURL() ?? null}
-        projectId={projectId}
-      />
+      <Suspense fallback={null}>
+        <ExportDialog
+          open={exportDialogOpen}
+          onOpenChange={setExportDialogOpen}
+          canvasDataUrl={canvas?.toDataURL() ?? null}
+          projectId={projectId}
+        />
+      </Suspense>
 
       <input
         ref={fileInputRef}
