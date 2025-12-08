@@ -1,8 +1,25 @@
 "use client"
 
 import { useState } from "react"
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import { filters as fabricFilters, FabricImage } from "fabric"
-import { Eye, EyeOff, X } from "lucide-react"
+import { Eye, EyeOff, GripVertical, X } from "lucide-react"
 
 import { useEditor } from "@/components/editor/editor-context"
 import { Button } from "@/components/ui/button"
@@ -93,12 +110,75 @@ const FILTER_PRESETS = [
   },
 ]
 
+interface SortableFilterItemProps {
+  filter: ActiveFilter
+  onRemove: (key: keyof FilterValues) => void
+}
+
+function SortableFilterItem({ filter, onRemove }: SortableFilterItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: filter.key })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-muted flex items-center justify-between rounded-md px-2 py-1.5"
+    >
+      <div className="flex items-center gap-2">
+        <button
+          {...attributes}
+          {...listeners}
+          className="text-muted-foreground hover:text-foreground cursor-grab touch-none active:cursor-grabbing"
+          aria-label="Drag to reorder"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <span className="text-xs font-medium">{filter.label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-muted-foreground text-xs">
+          {filter.value.toFixed(2)}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => onRemove(filter.key)}
+          className="h-5 w-5"
+        >
+          <X className="h-3 w-3" />
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export function FilterPanel() {
   const { canvas, addToHistory } = useEditor()
   const [filters, setFilters] = useState<FilterValues>(DEFAULT_FILTERS)
   const [showBeforeAfter, setShowBeforeAfter] = useState(false)
   const [originalImageData, setOriginalImageData] = useState<string | null>(
     null,
+  )
+  const [filterOrder, setFilterOrder] = useState<Array<keyof FilterValues>>([])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   )
 
   const handleFilterChange = (
@@ -111,7 +191,10 @@ export function FilterPanel() {
     applyFilters(newFilters)
   }
 
-  const applyFilters = (filterValues: FilterValues) => {
+  const applyFilters = (
+    filterValues: FilterValues,
+    customOrder?: Array<keyof FilterValues>,
+  ) => {
     if (!canvas) return
 
     const activeObject = canvas.getActiveObject()
@@ -127,47 +210,47 @@ export function FilterPanel() {
 
     const filterArray = []
 
-    if (filterValues.brightness !== 0) {
-      filterArray.push(
-        new fabricFilters.Brightness({ brightness: filterValues.brightness }),
-      )
-    }
+    // Apply filters in the order specified by filterOrder, or default order
+    const order =
+      customOrder || filterOrder.length > 0
+        ? filterOrder
+        : (Object.keys(filterValues) as Array<keyof FilterValues>)
 
-    if (filterValues.contrast !== 0) {
-      filterArray.push(
-        new fabricFilters.Contrast({ contrast: filterValues.contrast }),
-      )
-    }
+    for (const key of order) {
+      const value = filterValues[key]
+      if (value === 0) continue
 
-    if (filterValues.saturation !== 0) {
-      filterArray.push(
-        new fabricFilters.Saturation({ saturation: filterValues.saturation }),
-      )
-    }
-
-    if (filterValues.blur !== 0) {
-      filterArray.push(new fabricFilters.Blur({ blur: filterValues.blur }))
-    }
-
-    if (filterValues.hue !== 0) {
-      filterArray.push(
-        new fabricFilters.HueRotation({ rotation: filterValues.hue }),
-      )
-    }
-
-    if (filterValues.sharpen !== 0) {
-      const matrix = [
-        0,
-        -1 * filterValues.sharpen,
-        0,
-        -1 * filterValues.sharpen,
-        1 + 4 * filterValues.sharpen,
-        -1 * filterValues.sharpen,
-        0,
-        -1 * filterValues.sharpen,
-        0,
-      ]
-      filterArray.push(new fabricFilters.Convolute({ matrix }))
+      switch (key) {
+        case "brightness":
+          filterArray.push(new fabricFilters.Brightness({ brightness: value }))
+          break
+        case "contrast":
+          filterArray.push(new fabricFilters.Contrast({ contrast: value }))
+          break
+        case "saturation":
+          filterArray.push(new fabricFilters.Saturation({ saturation: value }))
+          break
+        case "blur":
+          filterArray.push(new fabricFilters.Blur({ blur: value }))
+          break
+        case "hue":
+          filterArray.push(new fabricFilters.HueRotation({ rotation: value }))
+          break
+        case "sharpen":
+          const matrix = [
+            0,
+            -1 * value,
+            0,
+            -1 * value,
+            1 + 4 * value,
+            -1 * value,
+            0,
+            -1 * value,
+            0,
+          ]
+          filterArray.push(new fabricFilters.Convolute({ matrix }))
+          break
+      }
     }
 
     activeObject.filters = filterArray
@@ -176,6 +259,21 @@ export function FilterPanel() {
 
     const state = JSON.stringify(canvas.toJSON())
     addToHistory(state)
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) return
+
+    const oldIndex = filterOrder.findIndex((key) => key === active.id)
+    const newIndex = filterOrder.findIndex((key) => key === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const newOrder = arrayMove(filterOrder, oldIndex, newIndex)
+    setFilterOrder(newOrder)
+    applyFilters(filters, newOrder)
   }
 
   const handlePreset = (preset: (typeof FILTER_PRESETS)[0]) => {
@@ -193,6 +291,8 @@ export function FilterPanel() {
     const newFilters = { ...filters, [key]: 0 }
     setFilters(newFilters)
     applyFilters(newFilters)
+    // Update filter order
+    setFilterOrder(filterOrder.filter((k) => k !== key))
   }
 
   const toggleBeforeAfter = () => {
@@ -220,6 +320,12 @@ export function FilterPanel() {
       label: FILTER_LABELS[key as keyof FilterValues],
       value,
     }))
+
+  // Update filter order when active filters change
+  if (activeFilters.length > 0 && filterOrder.length === 0) {
+    const keys = activeFilters.map((f) => f.key)
+    setFilterOrder(keys)
+  }
 
   return (
     <div className="flex h-full flex-col gap-4 p-4">
@@ -259,29 +365,26 @@ export function FilterPanel() {
                 )}
               </Toggle>
             </div>
-            <div className="space-y-1">
-              {activeFilters.map((filter) => (
-                <div
-                  key={filter.key}
-                  className="bg-muted flex items-center justify-between rounded-md px-2 py-1.5"
-                >
-                  <span className="text-xs font-medium">{filter.label}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-xs">
-                      {filter.value.toFixed(2)}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => handleRemoveFilter(filter.key)}
-                      className="h-5 w-5"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={filterOrder}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-1">
+                  {activeFilters.map((filter) => (
+                    <SortableFilterItem
+                      key={filter.key}
+                      filter={filter}
+                      onRemove={handleRemoveFilter}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           </div>
           <Separator />
         </>

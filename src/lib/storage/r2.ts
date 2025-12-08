@@ -112,7 +112,7 @@ export async function uploadToR2(
       "X-Amz-Access-Key-Id": config.accessKeyId,
       "X-Amz-Secret-Access-Key": config.secretAccessKey,
     },
-    body,
+    body: body as BodyInit,
   })
 
   if (!response.ok) {
